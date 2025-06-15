@@ -16,6 +16,7 @@ import { Link } from "react-router-dom";
 import FiltersPanel from "./FiltersPanel";
 import CropCard from "./CropCard";
 import PurchaseModal from "./PurchaseModal";
+import ChatModal from "./ChatModal"; // Adicionar import do ChatModal
 import { mockListings } from "./mockData";
 import MarketplaceOnboarding from "./MarketplaceOnboarding";
 import BlockchainSecurityInfo from "./BlockchainSecurityInfo";
@@ -220,6 +221,8 @@ const Marketplace = ({ walletInfo }) => {
   const [sortOrder, setSortOrder] = useState("default");
   const [selectedListing, setSelectedListing] = useState(null);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false); // Estado para o chat
+  const [selectedChatListing, setSelectedChatListing] = useState(null); // Listing selecionado para chat
   const [useMockData, setUseMockData] = useState(true);
   const [purchaseStatus, setPurchaseStatus] = useState({
     state: "idle",
@@ -379,6 +382,16 @@ const Marketplace = ({ walletInfo }) => {
     setSelectedListing(listing);
     setPurchaseStatus({ state: "idle", message: "" });
     setShowPurchaseModal(true);
+  };
+
+  const handleChatClick = (listing) => {
+    setSelectedChatListing(listing);
+    setShowChatModal(true);
+  };
+
+  const handleCloseChatModal = () => {
+    setShowChatModal(false);
+    setSelectedChatListing(null);
   };
 
   const handlePurchaseConfirm = async (purchaseAmount) => {
@@ -599,6 +612,7 @@ const Marketplace = ({ walletInfo }) => {
                   <CropCard
                     listing={listing}
                     onInvestClick={handleInvestClick}
+                    onChatClick={handleChatClick}
                   />
                 </div>
               ))}
@@ -617,6 +631,15 @@ const Marketplace = ({ walletInfo }) => {
             </div>
           )}
         </>
+      )}
+
+      {selectedChatListing && (
+        <ChatModal
+          isOpen={showChatModal}
+          onClose={handleCloseChatModal}
+          farmerName={selectedChatListing.farmerName}
+          cropType={selectedChatListing.cropType}
+        />
       )}
 
       {selectedListing && (

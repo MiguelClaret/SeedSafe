@@ -25,7 +25,7 @@ import {
   formatUsd,
   NEROCHAIN_ICON_SVG,
 } from "../../services/NeroConverter";
-import ChatModal from "./ChatModal"; // Importar o componente de chat
+// ChatModal será gerenciado pelo componente pai (Marketplace)
 
 // Define the Nerochain Icon component (usando os dados do serviço)
 const NerochainIcon = (props) => {
@@ -53,7 +53,7 @@ const EXAMPLE_PRICES = {
   Unknown: 1.0,
 };
 
-const CropCard = ({ listing = {}, onInvestClick }) => {
+const CropCard = ({ listing = {}, onInvestClick, onChatClick }) => {
   // Determinando preço exemplo com base no tipo de cultivo
   const cropType = listing?.cropType || "Unknown";
   const examplePrice = EXAMPLE_PRICES[cropType] || EXAMPLE_PRICES["Unknown"];
@@ -81,7 +81,7 @@ const CropCard = ({ listing = {}, onInvestClick }) => {
   const [showInNero, setShowInNero] = useState(true);
   const [neroRate, setNeroRate] = useState(2.45);
   const [isLoading, setIsLoading] = useState(true);
-  const [isChatOpen, setIsChatOpen] = useState(false); // Estado para o chat
+  // Remover estados do chat pois serão gerenciados pelo componente pai
 
   // Buscar taxa de conversão ao carregar o componente
   useEffect(() => {
@@ -111,12 +111,7 @@ const CropCard = ({ listing = {}, onInvestClick }) => {
 
   // Abrir chat
   const openChat = () => {
-    setIsChatOpen(true);
-  };
-
-  // Fechar chat
-  const closeChat = () => {
-    setIsChatOpen(false);
+    onChatClick && onChatClick(safeListingData);
   };
 
   // Format the date to be more readable
@@ -388,14 +383,6 @@ const CropCard = ({ listing = {}, onInvestClick }) => {
           </div>
         </div>
       </div>
-
-      {/* Modal de Chat */}
-      <ChatModal
-        isOpen={isChatOpen}
-        onClose={closeChat}
-        farmerName={safeListingData.farmerName}
-        cropType={safeListingData.cropType}
-      />
     </>
   );
 };
