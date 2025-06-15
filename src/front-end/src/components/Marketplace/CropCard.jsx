@@ -16,6 +16,7 @@ import {
   ChevronDown,
   DollarSign,
   RefreshCw,
+  MessageCircle,
 } from "lucide-react";
 import {
   getNeroRate,
@@ -24,6 +25,7 @@ import {
   formatUsd,
   NEROCHAIN_ICON_SVG,
 } from "../../services/NeroConverter";
+import ChatModal from "./ChatModal"; // Importar o componente de chat
 
 // Define the Nerochain Icon component (usando os dados do serviço)
 const NerochainIcon = (props) => {
@@ -79,6 +81,7 @@ const CropCard = ({ listing = {}, onInvestClick }) => {
   const [showInNero, setShowInNero] = useState(true);
   const [neroRate, setNeroRate] = useState(2.45);
   const [isLoading, setIsLoading] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false); // Estado para o chat
 
   // Buscar taxa de conversão ao carregar o componente
   useEffect(() => {
@@ -104,6 +107,16 @@ const CropCard = ({ listing = {}, onInvestClick }) => {
   // Alternar entre USD e NERO
   const toggleCurrency = () => {
     setShowInNero(!showInNero);
+  };
+
+  // Abrir chat
+  const openChat = () => {
+    setIsChatOpen(true);
+  };
+
+  // Fechar chat
+  const closeChat = () => {
+    setIsChatOpen(false);
   };
 
   // Format the date to be more readable
@@ -242,114 +255,148 @@ const CropCard = ({ listing = {}, onInvestClick }) => {
   };
 
   return (
-    <div
-      className={`bg-white rounded-lg shadow-md overflow-hidden border border-gray-100 transition-all duration-300 h-full flex flex-col ${
-        isHovered ? "shadow-xl -translate-y-1" : ""
-      }`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Card Header - Crop Image */}
+    <>
       <div
-        className={`${getBackgroundColor(
-          safeListingData.cropType
-        )} h-32 relative flex items-center justify-center flex-shrink-0 transition-all duration-300`}
+        className={`bg-white rounded-lg shadow-md overflow-hidden border border-gray-100 transition-all duration-300 h-full flex flex-col ${
+          isHovered ? "shadow-xl -translate-y-1" : ""
+        }`}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
-        {getCropIcon(safeListingData.cropType)}
-        <div className="absolute top-2 right-2 bg-white rounded-full px-1.5 py-0.5 text-xs font-medium text-amber-800 flex items-center shadow hover:shadow-md transition-all duration-300 cursor-pointer">
-          <Award className="h-2.5 w-2.5 mr-0.5 text-amber-500" />
-          NFT
-        </div>
-      </div>
-
-      {/* Card Content */}
-      <div className="p-3 flex-grow flex flex-col">
-        <div className="flex justify-between items-start mb-1">
-          <h3 className="text-base font-semibold text-gray-800 truncate">
-            {safeListingData.quantity}kg {safeListingData.cropType}
-          </h3>
-          {renderPrice()}
-        </div>
-
-        <div className="flex items-center mb-0.5 text-xs text-gray-600">
-          <User className="h-3 w-3 text-gray-500 mr-0.5 flex-shrink-0" />
-          <span className="truncate">{safeListingData.farmerName}</span>
-          <span className="mx-1">•</span>
-          {renderRating(safeListingData.farmerRating)}
-        </div>
-
-        <div className="flex items-center mb-0.5 text-xs text-gray-600">
-          <MapPin className="h-3 w-3 text-gray-500 mr-0.5 flex-shrink-0" />
-          <span className="truncate">{safeListingData.location}</span>
-        </div>
-
-        <div className="flex items-center mb-2 text-xs text-gray-600">
-          <Calendar className="h-3 w-3 text-gray-500 mr-0.5 flex-shrink-0" />
-          <span className="truncate">
-            Harvest by {formatDate(safeListingData.harvestDate)}
-          </span>
-        </div>
-
-        <div className="border-t border-gray-100 pt-2 mb-2 mt-auto">
-          <div className="flex justify-between items-center">
+        {/* Card Header - Crop Image */}
+        <div
+          className={`${getBackgroundColor(
+            safeListingData.cropType
+          )} h-32 relative flex items-center justify-center flex-shrink-0 transition-all duration-300`}
+        >
+          {getCropIcon(safeListingData.cropType)}
+          <div className="absolute top-2 right-2 bg-white rounded-full px-1.5 py-0.5 text-xs font-medium text-amber-800 flex items-center shadow hover:shadow-md transition-all duration-300 cursor-pointer">
+            <Award className="h-2.5 w-2.5 mr-0.5 text-amber-500" />
+            NFT
+          </div>
+          {/* Botão de Chat */}
+          <div className="absolute top-2 left-2">
             <button
-              onClick={() => setShowDetails(!showDetails)}
-              className="text-xs font-medium text-gray-600 hover:text-amber-700 transition-colors duration-300 flex items-center"
+              onClick={openChat}
+              className="bg-white hover:bg-gray-50 rounded-full p-2 shadow-md hover:shadow-lg transition-all duration-300 group chat-button-hover"
+              title="Contact farmer"
             >
-              {showDetails ? (
-                <>
-                  Details <ChevronUp className="ml-1 h-3 w-3" />
-                </>
-              ) : (
-                <>
-                  Details <ChevronDown className="ml-1 h-3 w-3" />
-                </>
-              )}
+              <MessageCircle className="h-4 w-4 text-amber-600 group-hover:text-amber-700" />
             </button>
-            <span className="text-xs font-medium text-green-700">
-              {safeListingData.carbonCredits} TCO2e
+          </div>
+        </div>
+
+        {/* Card Content */}
+        <div className="p-3 flex-grow flex flex-col">
+          <div className="flex justify-between items-start mb-1">
+            <h3 className="text-base font-semibold text-gray-800 truncate">
+              {safeListingData.quantity}kg {safeListingData.cropType}
+            </h3>
+            {renderPrice()}
+          </div>
+
+          <div className="flex items-center mb-0.5 text-xs text-gray-600">
+            <User className="h-3 w-3 text-gray-500 mr-0.5 flex-shrink-0" />
+            <span className="truncate">{safeListingData.farmerName}</span>
+            <span className="mx-1">•</span>
+            {renderRating(safeListingData.farmerRating)}
+          </div>
+
+          <div className="flex items-center mb-0.5 text-xs text-gray-600">
+            <MapPin className="h-3 w-3 text-gray-500 mr-0.5 flex-shrink-0" />
+            <span className="truncate">{safeListingData.location}</span>
+          </div>
+
+          <div className="flex items-center mb-2 text-xs text-gray-600">
+            <Calendar className="h-3 w-3 text-gray-500 mr-0.5 flex-shrink-0" />
+            <span className="truncate">
+              Harvest by {formatDate(safeListingData.harvestDate)}
             </span>
           </div>
 
-          <div
-            className={`overflow-hidden transition-all duration-300 ${
-              showDetails ? "max-h-36 opacity-100 mt-2" : "max-h-0 opacity-0"
-            }`}
-          >
-            {showDetails && (
-              <>
-                <div className="text-xs text-gray-600 mb-1 flex justify-between">
-                  <span>Total Value:</span>
-                  <span>
-                    {showInNero
-                      ? `${convertUsdToNero(
-                          safeListingData.totalValue,
-                          neroRate
-                        ).toFixed(2)} NERO`
-                      : `$${safeListingData.totalValue.toFixed(2)}`}
-                  </span>
-                </div>
-                <div className="text-xs text-gray-500 mb-1">
-                  <span className="flex items-center text-gray-400">
-                    <RefreshCw className="h-2.5 w-2.5 mr-0.5" />
-                    Taxa: 1 USD = {isLoading ? "..." : neroRate.toFixed(2)} NERO
-                  </span>
-                </div>
-                {renderPractices(safeListingData.sustainablePractices)}
-              </>
-            )}
+          <div className="border-t border-gray-100 pt-2 mb-2 mt-auto">
+            <div className="flex justify-between items-center">
+              <button
+                onClick={() => setShowDetails(!showDetails)}
+                className="text-xs font-medium text-gray-600 hover:text-amber-700 transition-colors duration-300 flex items-center"
+              >
+                {showDetails ? (
+                  <>
+                    Details <ChevronUp className="ml-1 h-3 w-3" />
+                  </>
+                ) : (
+                  <>
+                    Details <ChevronDown className="ml-1 h-3 w-3" />
+                  </>
+                )}
+              </button>
+              <span className="text-xs font-medium text-green-700">
+                {safeListingData.carbonCredits} TCO2e
+              </span>
+            </div>
+
+            <div
+              className={`overflow-hidden transition-all duration-300 ${
+                showDetails ? "max-h-36 opacity-100 mt-2" : "max-h-0 opacity-0"
+              }`}
+            >
+              {showDetails && (
+                <>
+                  <div className="text-xs text-gray-600 mb-1 flex justify-between">
+                    <span>Total Value:</span>
+                    <span>
+                      {showInNero
+                        ? `${convertUsdToNero(
+                            safeListingData.totalValue,
+                            neroRate
+                          ).toFixed(2)} NERO`
+                        : `$${safeListingData.totalValue.toFixed(2)}`}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-500 mb-1">
+                    <span className="flex items-center text-gray-400">
+                      <RefreshCw className="h-2.5 w-2.5 mr-0.5" />
+                      Taxa: 1 USD = {isLoading ? "..." : neroRate.toFixed(2)} NERO
+                    </span>
+                  </div>
+                  {renderPractices(safeListingData.sustainablePractices)}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Área de botões */}
+          <div className="space-y-2 mt-auto">
+            {/* Chat Button */}
+            <button
+              onClick={openChat}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-1.5 px-3 rounded-md font-medium transition-all duration-300 flex items-center justify-center text-sm relative overflow-hidden group"
+            >
+              <MessageCircle className="h-4 w-4 mr-2" />
+              <span className="relative z-10">Contact Farmer</span>
+              <div className="absolute inset-0 bg-green-700 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-in-out"></div>
+            </button>
+
+            {/* Botão de Investir */}
+            <button
+              onClick={() => onInvestClick && onInvestClick(safeListingData)}
+              className="w-full bg-amber-600 hover:bg-amber-700 text-white py-1.5 px-3 rounded-md font-medium transition-all duration-300 flex items-center justify-center text-sm relative overflow-hidden group"
+            >
+              <span className="relative z-10">Invest Now</span>
+              <div className="absolute inset-0 bg-amber-700 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-in-out"></div>
+            </button>
           </div>
         </div>
-
-        <button
-          onClick={() => onInvestClick && onInvestClick(safeListingData)}
-          className="w-full bg-amber-600 hover:bg-amber-700 text-white py-1.5 px-3 rounded-md font-medium transition-all duration-300 flex items-center justify-center text-sm mt-auto relative overflow-hidden group"
-        >
-          <span className="relative z-10">Invest Now</span>
-          <div className="absolute inset-0 bg-amber-700 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-in-out"></div>
-        </button>
       </div>
-    </div>
+
+      {/* Modal de Chat */}
+      <ChatModal
+        isOpen={isChatOpen}
+        onClose={closeChat}
+        farmerName={safeListingData.farmerName}
+        cropType={safeListingData.cropType}
+      />
+    </>
   );
 };
 

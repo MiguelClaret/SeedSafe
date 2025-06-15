@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ethers } from "ethers"; // Ethers v5
-import { usePublicClient, useWalletClient } from "wagmi"; // To get provider and signer
+import { ethers } from "ethers";
+import { usePublicClient, useWalletClient } from "wagmi";
 import {
   Search,
   Filter,
@@ -11,7 +11,6 @@ import {
   Leaf,
   Info,
   RefreshCw as RefreshIcon
-
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import FiltersPanel from "./FiltersPanel";
@@ -20,7 +19,7 @@ import PurchaseModal from "./PurchaseModal";
 import { mockListings } from "./mockData";
 import MarketplaceOnboarding from "./MarketplaceOnboarding";
 import BlockchainSecurityInfo from "./BlockchainSecurityInfo";
-import MarketplaceHowItWorksButton from "./HowItWorksButton"; // Import the new button component
+import MarketplaceHowItWorksButton from "./HowItWorksButton";
 
 // Import ABI and contract address
 import HarvestManagerABI from "../../abi/abiHarvest.json";
@@ -29,11 +28,136 @@ const harvestManagerAddress = "0xddaAd340b0f1Ef65169Ae5E41A8b10776a75482d";
 // NERO Chain configuration
 const NERO_RPC_URL = "https://rpc-testnet.nerochain.io";
 const NERO_CHAIN_ID = 689;
-
-// Fixed conversion rate provided by user
 const NERO_USD_RATE = 0.000134;
 
-// --- Helper Functions ---
+// Mock data function
+const getMockListingsForDisplay = () => {
+  const mockData = [
+    {
+      id: 1,
+      cropType: "Coffee",
+      quantity: 2500,
+      harvestDate: "2025-12-15",
+      location: "São Paulo, Brazil",
+      farmerName: "João Silva",
+      farmerRating: 4.8,
+      pricePerKg: 5.25,
+      sustainablePractices: ["organic", "water", "conservation"],
+      carbonCredits: 12.5,
+      totalValue: 13125,
+      pricePerUnit: ethers.utils.parseUnits("5.25", 18),
+      displayPriceNERO: "5.25",
+      displayPriceUSD: "5.25",
+      producer: "0x1234567890123456789012345678901234567890",
+      deliveryDate: Math.floor(new Date("2025-12-15").getTime() / 1000),
+      documentation: "Location: São Paulo, Brazil, Area: 10.5ha, Practices: organic,water,conservation",
+      crop: "Coffee"
+    },
+    {
+      id: 2,
+      cropType: "Soybean",
+      quantity: 5000,
+      harvestDate: "2025-09-30",
+      location: "Minas Gerais, Brazil",
+      farmerName: "Maria Santos",
+      farmerRating: 4.5,
+      pricePerKg: 0.85,
+      sustainablePractices: ["rotation", "conservation"],
+      carbonCredits: 8.2,
+      totalValue: 4250,
+      pricePerUnit: ethers.utils.parseUnits("0.85", 18),
+      displayPriceNERO: "0.85",
+      displayPriceUSD: "0.85",
+      producer: "0x2345678901234567890123456789012345678901",
+      deliveryDate: Math.floor(new Date("2025-09-30").getTime() / 1000),
+      documentation: "Location: Minas Gerais, Brazil, Area: 15.2ha, Practices: rotation,conservation",
+      crop: "Soybean"
+    },
+    {
+      id: 3,
+      cropType: "Corn",
+      quantity: 8000,
+      harvestDate: "2025-10-20",
+      location: "Goiás, Brazil",
+      farmerName: "Carlos Oliveira",
+      farmerRating: 4.2,
+      pricePerKg: 0.65,
+      sustainablePractices: ["water", "rotation"],
+      carbonCredits: 6.8,
+      totalValue: 5200,
+      pricePerUnit: ethers.utils.parseUnits("0.65", 18),
+      displayPriceNERO: "0.65",
+      displayPriceUSD: "0.65",
+      producer: "0x3456789012345678901234567890123456789012",
+      deliveryDate: Math.floor(new Date("2025-10-20").getTime() / 1000),
+      documentation: "Location: Goiás, Brazil, Area: 12.3ha, Practices: water,rotation",
+      crop: "Corn"
+    },
+    {
+      id: 4,
+      cropType: "Rice",
+      quantity: 3500,
+      harvestDate: "2025-11-10",
+      location: "Rio Grande do Sul, Brazil",
+      farmerName: "Ana Pereira",
+      farmerRating: 5.0,
+      pricePerKg: 1.20,
+      sustainablePractices: ["organic", "water", "conservation"],
+      carbonCredits: 15.3,
+      totalValue: 4200,
+      pricePerUnit: ethers.utils.parseUnits("1.20", 18),
+      displayPriceNERO: "1.20",
+      displayPriceUSD: "1.20",
+      producer: "0x4567890123456789012345678901234567890123",
+      deliveryDate: Math.floor(new Date("2025-11-10").getTime() / 1000),
+      documentation: "Location: Rio Grande do Sul, Brazil, Area: 18.7ha, Practices: organic,water,conservation",
+      crop: "Rice"
+    },
+    {
+      id: 5,
+      cropType: "Wheat",
+      quantity: 4500,
+      harvestDate: "2025-08-15",
+      location: "Paraná, Brazil",
+      farmerName: "Roberto Costa",
+      farmerRating: 4.3,
+      pricePerKg: 0.90,
+      sustainablePractices: ["conservation", "rotation"],
+      carbonCredits: 9.1,
+      totalValue: 4050,
+      pricePerUnit: ethers.utils.parseUnits("0.90", 18),
+      displayPriceNERO: "0.90",
+      displayPriceUSD: "0.90",
+      producer: "0x5678901234567890123456789012345678901234",
+      deliveryDate: Math.floor(new Date("2025-08-15").getTime() / 1000),
+      documentation: "Location: Paraná, Brazil, Area: 14.2ha, Practices: conservation,rotation",
+      crop: "Wheat"
+    },
+    {
+      id: 6,
+      cropType: "Coffee",
+      quantity: 1800,
+      harvestDate: "2026-01-20",
+      location: "Espírito Santo, Brazil",
+      farmerName: "Fernanda Lima",
+      farmerRating: 4.9,
+      pricePerKg: 5.50,
+      sustainablePractices: ["organic", "water"],
+      carbonCredits: 11.7,
+      totalValue: 9900,
+      pricePerUnit: ethers.utils.parseUnits("5.50", 18),
+      displayPriceNERO: "5.50",
+      displayPriceUSD: "5.50",
+      producer: "0x6789012345678901234567890123456789012345",
+      deliveryDate: Math.floor(new Date("2026-01-20").getTime() / 1000),
+      documentation: "Location: Espírito Santo, Brazil, Area: 8.9ha, Practices: organic,water",
+      crop: "Coffee"
+    }
+  ];
+  return mockData;
+};
+
+// Helper Functions
 const formatPrice = (priceInWei) => {
   if (!priceInWei) return "0";
   return ethers.utils.formatUnits(priceInWei, 18);
@@ -41,14 +165,8 @@ const formatPrice = (priceInWei) => {
 
 const formatDate = (timestamp) => {
   if (!timestamp) return 'N/A';
-
-  const time =
-    typeof timestamp?.toNumber === 'function'
-      ? timestamp.toNumber()
-      : parseInt(timestamp);
-
+  const time = typeof timestamp?.toNumber === 'function' ? timestamp.toNumber() : parseInt(timestamp);
   if (!time) return 'N/A';
-
   return new Date(time * 1000).toLocaleDateString();
 };
 
@@ -59,7 +177,6 @@ const parseDocumentation = (docString) => {
       area: 0,
       practicesString: '',
       sustainablePractices: []
-
     };
   }
   const locationMatch = docString.match(/Location: ([^,]+, [^,]+)/);
@@ -70,10 +187,7 @@ const parseDocumentation = (docString) => {
     area: areaMatch ? parseFloat(areaMatch[1]) : 0,
     practicesString: practicesMatch ? practicesMatch[1].trim() : "",
     sustainablePractices: practicesMatch
-      ? practicesMatch[1]
-          .split(",")
-          .map((p) => p.trim())
-          .filter((p) => p)
+      ? practicesMatch[1].split(",").map((p) => p.trim()).filter((p) => p)
       : [],
   };
 };
@@ -94,7 +208,6 @@ const calculateCarbonCredits = (practices, area) => {
   const numericArea = parseFloat(area) || 1;
   return (totalCredits * numericArea).toFixed(2);
 };
-// ----------------------
 
 const Marketplace = ({ walletInfo }) => {
   const [listings, setListings] = useState([]);
@@ -107,32 +220,38 @@ const Marketplace = ({ walletInfo }) => {
   const [sortOrder, setSortOrder] = useState("default");
   const [selectedListing, setSelectedListing] = useState(null);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [useMockData, setUseMockData] = useState(true);
   const [purchaseStatus, setPurchaseStatus] = useState({
     state: "idle",
     message: "",
-  }); // idle, pending, success, error
+  });
   const [filters, setFilters] = useState({
     minRating: 0,
     sustainablePractices: [],
     harvestDateBefore: null,
     cropTypes: [],
   });
-  
-  // Onboarding state
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   const provider = usePublicClient();
-  // Get the EOA signer using Wagmi's hook for connected wallet
   const { data: walletClient } = useWalletClient();
 
-  // Fetch data from NERO blockchain
+  // Fetch data from NERO blockchain or use mock data
   useEffect(() => {
     const fetchHarvests = async () => {
-      if (!provider) {
-        setError(
-          "NERO Chain provider not available. Please connect your wallet."
-        );
-        setIsLoading(false);
+      const shouldUseMock = !provider || useMockData;
+      
+      if (shouldUseMock) {
+        console.log("🎭 Using mock data for marketplace display");
+        setIsLoading(true);
+        
+        setTimeout(() => {
+          const mockData = getMockListingsForDisplay();
+          setListings(mockData);
+          setError(null);
+          setIsLoading(false);
+          console.log("✅ Mock data loaded successfully:", mockData.length, "listings");
+        }, 800);
         return;
       }
 
@@ -140,98 +259,79 @@ const Marketplace = ({ walletInfo }) => {
       setError(null);
 
       try {
-
         console.log("🌾 Connecting to NERO Chain...");
-        const neroJsonRpcProvider = new ethers.providers.JsonRpcProvider(
-          NERO_RPC_URL
-        );
-        const contract = new ethers.Contract(
-          harvestManagerAddress,
-          HarvestManagerABI,
-          neroJsonRpcProvider
-        );
+        const neroJsonRpcProvider = new ethers.providers.JsonRpcProvider(NERO_RPC_URL);
+        const contract = new ethers.Contract(harvestManagerAddress, HarvestManagerABI, neroJsonRpcProvider);
 
         console.log("📡 Calling getAvailableHarvests()...");
         const rawHarvests = await contract.getAvailableHarvests();
         console.log("📦 Raw harvests from contract:", rawHarvests);
-
-
         console.log(`✅ Fetched ${rawHarvests.length} available harvests`);
 
-        // Map the rawHarvests to add an id field (since the function doesn't return harvestId)
         const fetchedHarvests = rawHarvests.map((h, index) => ({
-          id: index, // Use index as temporary ID (can be improved later if you add harvestId in the struct)
+          id: index,
           ...h,
         }));
 
-        setListings(fetchedHarvests);
+        if (fetchedHarvests.length === 0) {
+          console.log("📭 No blockchain data found, using mock data as fallback");
+          const mockData = getMockListingsForDisplay();
+          setListings(mockData);
+        } else {
+          setListings(fetchedHarvests);
+        }
       } catch (err) {
         console.error("❌ Error fetching harvests from NERO Chain:", err);
-        setError(
-          "Failed to load marketplace data from NERO Chain. Please try again later."
-        );
-        setListings([]);
+        console.log("🎭 Falling back to mock data");
+        
+        const mockData = getMockListingsForDisplay();
+        setListings(mockData);
+        setError("Failed to load marketplace data from NERO Chain. Showing demo data.");
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchHarvests();
-  }, [provider]);
+  }, [provider, useMockData]);
 
-  // Handler for the "How It Works" button
   const handleHowItWorksClick = () => {
-    // Mostrar o onboarding independentemente de ter sido concluído antes
     setShowOnboarding(true);
   };
 
-  // Handle onboarding completion
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
+  };
+
+  const toggleDataSource = () => {
+    setUseMockData(!useMockData);
   };
 
   // Format fetched data
   useEffect(() => {
     const formatted = listings.map((harvest) => {
       const docInfo = parseDocumentation(harvest.documentation);
-      // Support both contract harvests (harvest.crop) and mock listings (harvest.cropType)
-
       const cropName = harvest.crop || harvest.cropType || "";
-      const carbonCredits = calculateCarbonCredits(
-        docInfo.sustainablePractices,
-        docInfo.area
-      );
-      // Price is already in Wei from the contract
+      const carbonCredits = calculateCarbonCredits(docInfo.sustainablePractices, docInfo.area);
       const priceInWei = harvest.pricePerUnit;
-      const displayPriceNERO = formatPrice(priceInWei); // Format Wei to NERO string
-      // Calculate display price in USD using the fixed rate
-      const displayPriceUSD = (
-        parseFloat(displayPriceNERO) * NERO_USD_RATE
-      ).toFixed(2);
+      const displayPriceNERO = formatPrice(priceInWei);
+      const displayPriceUSD = (parseFloat(displayPriceNERO) * NERO_USD_RATE).toFixed(2);
 
       return {
         id: harvest.id,
         cropType: cropName,
-
-        quantity:
-          typeof harvest.quantity?.toNumber === "function"
-            ? harvest.quantity.toNumber()
-            : parseInt(harvest.quantity || 0),
-
-        pricePerUnit: priceInWei, // Keep Wei price for calculations
-        displayPriceNERO: displayPriceNERO, // NERO price for display
-        displayPriceUSD: displayPriceUSD, // USD price for display
+        quantity: typeof harvest.quantity?.toNumber === "function" ? harvest.quantity.toNumber() : parseInt(harvest.quantity || 0),
+        pricePerUnit: priceInWei,
+        displayPriceNERO: displayPriceNERO,
+        displayPriceUSD: displayPriceUSD,
         harvestDate: formatDate(harvest.deliveryDate),
         producerAddress: harvest.producer,
-        farmerName: harvest.producer
-          ? `Producer ${harvest.producer.substring(0, 6)}...`
-
-          : "Unknown Producer",
+        farmerName: harvest.producer ? `Producer ${harvest.producer.substring(0, 6)}...` : harvest.farmerName || "Unknown Producer",
         location: docInfo.location,
         area: docInfo.area,
         sustainablePractices: docInfo.sustainablePractices,
         carbonCredits: parseFloat(carbonCredits),
-        farmerRating: 4.5, // Placeholder
+        farmerRating: harvest.farmerRating || 4.5,
         imageUrl: `/placeholder-images/${cropName.toLowerCase()}.jpg`,
       };
     });
@@ -250,7 +350,7 @@ const Marketplace = ({ walletInfo }) => {
           l.location.toLowerCase().includes(query)
       );
     }
-    // Apply other filters (rating, practices, cropTypes) - simplified
+
     if (filters.minRating > 0)
       results = results.filter((l) => l.farmerRating >= filters.minRating);
     if (filters.sustainablePractices.length > 0)
@@ -262,7 +362,6 @@ const Marketplace = ({ walletInfo }) => {
     if (filters.cropTypes.length > 0)
       results = results.filter((l) => filters.cropTypes.includes(l.cropType));
 
-    // Apply sorting
     if (sortOrder === "price-low")
       results.sort((a, b) => a.pricePerUnit.sub(b.pricePerUnit).toNumber());
     else if (sortOrder === "price-high")
@@ -278,13 +377,11 @@ const Marketplace = ({ walletInfo }) => {
 
   const handleInvestClick = (listing) => {
     setSelectedListing(listing);
-    setPurchaseStatus({ state: "idle", message: "" }); // Reset status
+    setPurchaseStatus({ state: "idle", message: "" });
     setShowPurchaseModal(true);
   };
 
-  // Handle purchase confirmation - Using NERO Chain for investors
   const handlePurchaseConfirm = async (purchaseAmount) => {
-    // Check if investor is connected via EOA and listing is selected
     if (!walletClient || walletInfo?.role !== "investor" || !selectedListing) {
       setPurchaseStatus({
         state: "error",
@@ -298,15 +395,10 @@ const Marketplace = ({ walletInfo }) => {
       state: "pending",
       message: "Preparing NERO Chain transaction...",
     });
-    console.log(
-      `Attempting to purchase ${purchaseAmount} units of harvest ID ${selectedListing.id} on NERO Chain`
-    );
+    console.log(`Attempting to purchase ${purchaseAmount} units of harvest ID ${selectedListing.id} on NERO Chain`);
 
     try {
-      // Get the EOA signer from the wallet client
       const signer = walletClient;
-
-      // Check if we're on the correct network (NERO Chain)
       const network = await signer.getChainId();
       if (network !== NERO_CHAIN_ID) {
         setPurchaseStatus({
@@ -316,35 +408,19 @@ const Marketplace = ({ walletInfo }) => {
         return;
       }
 
-      // Create contract instance with the signer
-      const contract = new ethers.Contract(
-        harvestManagerAddress,
-        HarvestManagerABI,
-        signer
-      );
-
-      // Calculate total cost in Wei (NERO)
-      // pricePerUnit is already in Wei
+      const contract = new ethers.Contract(harvestManagerAddress, HarvestManagerABI, signer);
       const amountToBuy = ethers.BigNumber.from(purchaseAmount);
       const totalCostInWei = selectedListing.pricePerUnit.mul(amountToBuy);
 
-      console.log(
-        `Calculated Total Cost on NERO Chain: ${ethers.utils.formatUnits(
-          totalCostInWei,
-          18
-        )} NERO`
-      );
+      console.log(`Calculated Total Cost on NERO Chain: ${ethers.utils.formatUnits(totalCostInWei, 18)} NERO`);
 
       setPurchaseStatus({
         state: "pending",
         message: "Please confirm the transaction in your wallet...",
       });
 
-      // Call the buyToken function on the contract
       const tx = await contract.buyToken(selectedListing.id, amountToBuy, {
-        value: totalCostInWei, // Send NERO as msg.value
-        // Optional: Add gas limit estimation if needed
-        // gasLimit: ethers.utils.hexlify(300000)
+        value: totalCostInWei,
       });
 
       setPurchaseStatus({
@@ -353,7 +429,6 @@ const Marketplace = ({ walletInfo }) => {
       });
       console.log("NERO Transaction submitted:", tx.hash);
 
-      // Wait for the transaction to be mined
       const receipt = await tx.wait();
       console.log("NERO Transaction confirmed:", receipt);
 
@@ -361,21 +436,16 @@ const Marketplace = ({ walletInfo }) => {
         state: "success",
         message: `Purchase successful on NERO Chain! Transaction Hash: ${receipt.transactionHash}`,
       });
-      // Optionally: Refresh listings or update UI after successful purchase
-      // fetchHarvests(); // Re-fetch data
-      setTimeout(() => setShowPurchaseModal(false), 3000); // Close modal after delay
+      setTimeout(() => setShowPurchaseModal(false), 3000);
     } catch (err) {
       console.error("NERO Chain purchase failed:", err);
-      // Try to extract a more user-friendly error message
-      let errorMessage =
-        "Purchase failed on NERO Chain. Check console for details.";
+      let errorMessage = "Purchase failed on NERO Chain. Check console for details.";
       if (err.reason) {
         errorMessage = `NERO Transaction failed: ${err.reason}`;
       } else if (err.message) {
         errorMessage = err.message;
       }
       if (err.code === 4001) {
-        // User rejected transaction
         errorMessage = "Transaction rejected in wallet.";
       }
       setPurchaseStatus({ state: "error", message: errorMessage });
@@ -391,24 +461,40 @@ const Marketplace = ({ walletInfo }) => {
           <Leaf className="mr-2 h-8 w-8 text-green-600" />
           NERO Chain Marketplace
         </h1>
-        {walletInfo?.role === "producer" && (
-          <Link
-            to="/register"
-            className="bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded-md flex items-center transition-colors"
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={toggleDataSource}
+            className={`px-3 py-1 rounded-md text-sm transition-colors ${
+              useMockData 
+                ? 'bg-purple-100 text-purple-800 border border-purple-300' 
+                : 'bg-gray-100 text-gray-600 border border-gray-300'
+            }`}
           >
-            <Leaf className="mr-2 h-5 w-5" /> Register Your Crop with NERO AA
-          </Link>
-        )}
+            {useMockData ? '🎭 Mock Data' : '⛓️ Blockchain'}
+          </button>
+          
+          {walletInfo?.role === "producer" && (
+            <Link
+              to="/register"
+              className="bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded-md flex items-center transition-colors"
+            >
+              <Leaf className="mr-2 h-5 w-5" /> Register Your Crop with NERO AA
+            </Link>
+          )}
+        </div>
       </div>
-
 
       <BlockchainSecurityInfo />
       <div className="bg-white rounded-lg shadow-lg p-6 mb-8 transition-all duration-300 hover:shadow-xl">
         <div className="flex items-start gap-2">
           <Info className="h-5 w-5 text-green-600 flex-shrink-0 mt-1" />
           <p className="text-gray-700 mb-6">
-            Browse sustainable farming opportunities on NERO Chain. All
-            transactions use the NERO token.
+            Browse sustainable farming opportunities on NERO Chain. All transactions use the NERO token.
+            {useMockData && (
+              <span className="ml-2 text-purple-600 font-medium">
+                (Currently showing demo data for visualization)
+              </span>
+            )}
           </p>
         </div>
         <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -459,38 +545,44 @@ const Marketplace = ({ walletInfo }) => {
           {isLoading ? (
             <>
               <RefreshIcon className="mr-2 h-4 w-4 text-green-600 animate-spin" />{" "}
-              Loading NERO Chain listings...
+              Loading {useMockData ? 'demo' : 'NERO Chain'} listings...
             </>
           ) : (
-            `Showing ${filteredListings.length} results from NERO Chain`
+            `Showing ${filteredListings.length} results ${useMockData ? 'from demo data' : 'from NERO Chain'}`
           )}
         </div>
       </div>
 
-      {/* NERO Chain Network Information */}
-      <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-6 flex items-start gap-3">
-        <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+      <div className={`border px-4 py-3 rounded mb-6 flex items-start gap-3 ${
+        useMockData 
+          ? 'bg-purple-50 border-purple-200 text-purple-700'
+          : 'bg-blue-50 border-blue-200 text-blue-700'
+      }`}>
+        <Info className={`h-5 w-5 mt-0.5 flex-shrink-0 ${
+          useMockData ? 'text-purple-500' : 'text-blue-500'
+        }`} />
         <div>
-          <p className="font-medium">NERO Chain Platform</p>
+          <p className="font-medium">
+            {useMockData ? 'Demo Mode' : 'NERO Chain Platform'}
+          </p>
           <p className="text-sm">
-            All listings are stored on NERO Chain (TestNet). Account Abstraction
-            is available for producers.
+            {useMockData 
+              ? 'Showing mock data for visualization and testing purposes. Switch to blockchain mode to see real listings.'
+              : 'All listings are stored on NERO Chain (TestNet). Account Abstraction is available for producers.'
+            }
           </p>
           {walletInfo?.isSmartAccount ? (
             <p className="text-sm mt-2">
-              You are connected with a NERO Smart Account. Your transactions
-              will be gasless.
+              You are connected with a NERO Smart Account. Your transactions will be gasless.
             </p>
           ) : (
             <p className="text-sm mt-2">
-              Investors need NERO tokens to purchase. Producers can use NERO AA
-              for gasless transactions.
+              Investors need NERO tokens to purchase. Producers can use NERO AA for gasless transactions.
             </p>
           )}
         </div>
       </div>
 
-      {/* Listings Grid or No Results Message */}
       {!isLoading && (
         <>
           {filteredListings.length > 0 ? (
@@ -514,50 +606,38 @@ const Marketplace = ({ walletInfo }) => {
           ) : (
             <div className="text-center p-12 bg-white rounded-lg shadow mt-6">
               <p className="text-gray-600">
-                Nenhuma safra validada encontrada na NERO Chain ou ocorreu um
-                erro ao buscar os dados.
+                {useMockData 
+                  ? "No results found in the demo data."
+                  : "No validated harvests found on NERO Chain or an error occurred while fetching data."
+                }
               </p>
               {error && (
-                <p className="text-red-600 mt-2 text-sm">Erro: {error}</p>
+                <p className="text-red-600 mt-2 text-sm">Error: {error}</p>
               )}
             </div>
           )}
         </>
       )}
 
-      {/* Purchase Modal */}
       {selectedListing && (
         <PurchaseModal
           isOpen={showPurchaseModal}
           onClose={() => setShowPurchaseModal(false)}
           listing={selectedListing}
           onConfirm={handlePurchaseConfirm}
-          walletInfo={walletInfo} // Pass wallet info
-          purchaseStatus={purchaseStatus} // Pass purchase status for feedback
+          walletInfo={walletInfo}
+          purchaseStatus={purchaseStatus}
           chainName="NERO Chain"
         />
       )}
       
-      {/* Onboarding Component */}
       <MarketplaceOnboarding 
         isOpen={showOnboarding} 
         onComplete={handleOnboardingComplete} 
       />
       
-      {/* Marketplace How It Works Button - positioned above the general onboarding button */}
       <MarketplaceHowItWorksButton onClick={handleHowItWorksClick} />
 
-
-      {/* Onboarding Component */}
-      <MarketplaceOnboarding
-        isOpen={showOnboarding}
-        onComplete={handleOnboardingComplete}
-      />
-
-      {/* Marketplace How It Works Button - positioned above the general onboarding button */}
-      <MarketplaceHowItWorksButton onClick={handleHowItWorksClick} />
-
-      {/* CSS Styles */}
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fadeIn { animation: fadeIn 0.4s ease-out; }
