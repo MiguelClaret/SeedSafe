@@ -5,12 +5,13 @@ import {
   getProfile,
   upsertProfile,
   SustainabilityBadges,
-} from "../services/mockDb";
+} from "../services/profileService";
 import AvatarInput from "./AvatarInput";
 import Badge from "./Badge";
 import { FaPencilAlt } from "react-icons/fa";
 import { ethers } from "ethers";
 import HarvestManagerABI from "../abi/abiHarvest.json";
+import { useParams } from "react-router-dom";
 
 // Constants
 const NERO_RPC_URL = "https://rpc-testnet.nerochain.io";
@@ -27,35 +28,73 @@ const FIELD_HINTS = {
 export default function Profile() {
   const walletInfo = useWalletInfo();
   const qc = useQueryClient();
-  const wallet = walletInfo?.address;
+
+  // carteira conectada do usuário
+  const connectedWallet = walletInfo?.address;
+
+  // carteira sendo visualizada (parametro na rota)
+  const { wallet: walletParam } = useParams();
+  const viewingWallet = (walletParam || connectedWallet || "").toLowerCase();
+
+  const isOwner = !!connectedWallet && viewingWallet === connectedWallet.toLowerCase();
 
   const { data: profile } = useQuery({
-    queryKey: ["profile", wallet],
-    enabled: !!wallet,
-    queryFn: () => getProfile(wallet),
+    queryKey: ["profile", viewingWallet],
+    enabled: !!viewingWallet,
+    queryFn: () => getProfile(viewingWallet),
   });
 
   const mutation = useMutation({
     mutationFn: upsertProfile,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["profile", wallet] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["profile", viewingWallet] }),
   });
 
   const ensureProfile = () => {
-    if (!profile && wallet) {
+    if (!profile && isOwner && connectedWallet) {
       mutation.mutate({
-        wallet,
+        wallet: connectedWallet,
         displayName: "",
         description: "",
         location: "",
         website: "",
         badges: [],
+        avatarUrl: DEFAULT_AVATAR,
       });
     }
   };
 
   useEffect(() => {
     ensureProfile();
-  }, [wallet, profile]);
+  }, [connectedWallet, profile, isOwner]);
+
+  // Local draft profile state to batch updates
+  const [draftProfile, setDraftProfile] = useState(null);
+
+  // Sync draft with fetched profile
+  useEffect(() => {
+    if (profile) {
+      setDraftProfile(profile);
+    }
+  }, [profile]);
+
+  // Helper: has unsaved changes?
+  const isDirty = React.useMemo(() => {
+    if (!profile || !draftProfile) return false;
+    return JSON.stringify(profile) !== JSON.stringify(draftProfile);
+  }, [profile, draftProfile]);
+
+  // Update local draft only
+  const updateField = (field, value) => {
+    if (!isOwner) return;
+    setDraftProfile((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const saveChanges = () => {
+    if (!draftProfile) return;
+    if (isOwner) {
+      mutation.mutate(draftProfile);
+    }
+  };
 
   // Edit state for each field
   const [editing, setEditing] = useState({
@@ -95,28 +134,26 @@ export default function Profile() {
     data: closedPurchases,
     isLoading: loadingPurchases,
   } = useQuery({
-    queryKey: ["closedPurchases", wallet],
-    enabled: !!wallet,
-    queryFn: () => fetchClosedPurchases(wallet),
+    queryKey: ["closedPurchases", viewingWallet],
+    enabled: !!viewingWallet,
+    queryFn: () => fetchClosedPurchases(viewingWallet),
   });
 
-  if (!wallet) {
+  if (!viewingWallet) {
     return <p className="p-4">Connect your wallet to view your profile.</p>;
   }
 
-  const updateField = (field, value) => {
-    if (!profile) return;
-    mutation.mutate({ ...profile, [field]: value });
+  const EditButton = ({ onClick }) => {
+    if (!isOwner) return null;
+    return (
+      <button
+        className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 transform hover:scale-110"
+        onClick={onClick}
+      >
+        <FaPencilAlt className="text-gray-500 hover:text-green-600 transition-colors duration-200" />
+      </button>
+    );
   };
-
-  const EditButton = ({ onClick }) => (
-    <button
-      className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 transform hover:scale-110"
-      onClick={onClick}
-    >
-      <FaPencilAlt className="text-gray-500 hover:text-green-600 transition-colors duration-200" />
-    </button>
-  );
 
   const ProfileField = ({ label, value, field, hint }) => (
     <div className="mt-6 animate-fadeIn">
@@ -124,10 +161,10 @@ export default function Profile() {
         <label className="text-sm font-medium text-gray-700">{label}</label>
         {hint && <span className="text-xs text-gray-500">{hint}</span>}
       </div>
-      {!editing[field] ? (
+      {!editing[field] || !isOwner ? (
         <div className="flex items-center gap-2 mt-1 group">
           <span className="text-gray-900">{value || "—"}</span>
-          <EditButton onClick={() => setEditing({ ...editing, [field]: true })} />
+          {isOwner && <EditButton onClick={() => setEditing({ ...editing, [field]: true })} />}
         </div>
       ) : (
         field === "description" ? (
@@ -169,25 +206,27 @@ export default function Profile() {
           <div className="flex flex-col items-center gap-4 animate-fadeIn">
             <div className="relative group">
               <img
-                src={profile?.avatarUrl || DEFAULT_AVATAR}
+                src={draftProfile?.avatarUrl || DEFAULT_AVATAR}
                 alt="Avatar"
                 className="w-32 h-32 rounded-full object-cover border-2 border-gray-200 transition-transform duration-200 group-hover:scale-105"
               />
-              <div className="absolute -bottom-2 -right-2">
-                <EditButton onClick={() => setEditing({ ...editing, avatar: true })} />
-              </div>
+              {isOwner && (
+                <div className="absolute -bottom-2 -right-2">
+                  <EditButton onClick={() => setEditing({ ...editing, avatar: true })} />
+                </div>
+              )}
             </div>
             <div className="text-center">
-              <h2 className="text-xl font-medium text-gray-900">{profile?.displayName || "Your Name"}</h2>
-              <p className="text-sm text-gray-500">{profile?.location || "Location"}</p>
+              <h2 className="text-xl font-medium text-gray-900">{draftProfile?.displayName || "Your Name"}</h2>
+              <p className="text-sm text-gray-500">{draftProfile?.location || "Location"}</p>
             </div>
           </div>
 
           {/* Avatar editor */}
-          {editing.avatar && (
+          {isOwner && editing.avatar && (
             <div className="mt-4 animate-fadeIn">
               <AvatarInput
-                defaultUrl={profile?.avatarUrl}
+                defaultUrl={draftProfile?.avatarUrl}
                 onChange={(url) => {
                   updateField("avatarUrl", url);
                   setEditing({ ...editing, avatar: false });
@@ -201,19 +240,19 @@ export default function Profile() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
             <ProfileField
               label="Display Name"
-              value={profile?.displayName}
+              value={draftProfile?.displayName}
               field="displayName"
               hint={FIELD_HINTS.displayName}
             />
             <ProfileField
               label="Location"
-              value={profile?.location}
+              value={draftProfile?.location}
               field="location"
               hint={FIELD_HINTS.location}
             />
             <ProfileField
               label="Website / Social Media"
-              value={profile?.website}
+              value={draftProfile?.website}
               field="website"
               hint={FIELD_HINTS.website}
             />
@@ -225,7 +264,7 @@ export default function Profile() {
           <h3 className="text-lg font-medium text-gray-900">About & Certifications</h3>
           <ProfileField
             label="Description"
-            value={profile?.description}
+            value={draftProfile?.description}
             field="description"
             hint={FIELD_HINTS.description}
           />
@@ -234,21 +273,23 @@ export default function Profile() {
           <div className="animate-fadeIn pt-4 border-t border-gray-100">
             <div className="flex items-center gap-2 mb-4">
               <h2 className="font-medium text-gray-900">Sustainability Badges</h2>
-              <EditButton
-                onClick={() => setEditing({ ...editing, badges: !editing.badges })}
-              />
+              {isOwner && (
+                <EditButton
+                  onClick={() => setEditing({ ...editing, badges: !editing.badges })}
+                />
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               {SustainabilityBadges.map((b) => {
-                const selected = profile?.badges?.includes(b);
+                const selected = draftProfile?.badges?.includes(b);
                 return (
                   <Badge
                     key={b}
                     label={b}
                     selected={selected}
                     onToggle={(sel) => {
-                      if (!editing.badges) return;
-                      const current = new Set(profile?.badges || []);
+                      if (!editing.badges || !isOwner) return;
+                      const current = new Set(draftProfile?.badges || []);
                       sel ? current.add(b) : current.delete(b);
                       updateField("badges", Array.from(current));
                     }}
@@ -300,9 +341,18 @@ export default function Profile() {
         </div>
       </div>
 
-      {mutation.isLoading && (
-        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-md shadow-lg animate-fadeIn">
-          Saving changes...
+      {isOwner && isDirty && (
+        <button
+          onClick={saveChanges}
+          className="fixed bottom-6 right-6 bg-green-600 text-white px-6 py-3 rounded-full shadow-lg hover:bg-green-700 transition-all duration-200 z-50"
+        >
+          Save Changes
+        </button>
+      )}
+
+      {isOwner && mutation.isLoading && (
+        <div className="fixed bottom-6 right-6 bg-green-600 text-white px-4 py-2 rounded-full shadow-lg animate-fadeIn">
+          Saving...
         </div>
       )}
     </div>

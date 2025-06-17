@@ -481,7 +481,7 @@ function AppContent() {
                 }
               />
               <Route
-                path="/profile"
+                path="/profile/:wallet?"
                 element={
                   <RequireAuth>
                     <Profile />

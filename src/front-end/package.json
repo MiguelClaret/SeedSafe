@@ -9,6 +9,7 @@
     "@coinbase/wallet-sdk": "^4.3.2",
     "@google/genai": "^0.9.0",
     "@rainbow-me/rainbowkit": "^2.2.4",
+    "@supabase/supabase-js": "^2.50.0",
     "@tailwindcss/postcss": "^4.1.4",
     "@tanstack/react-query": "^5.75.0",
     "@web3auth/auth-adapter": "^9.7.0",
