@@ -43,8 +43,6 @@ import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
 import { CHAIN_NAMESPACES, WEB3AUTH_NETWORK } from "@web3auth/base";
 import { Presets } from "userop";
 import { getAAWalletAddress, isAAWalletDeployed } from "./utils/aaUtils";
-import Profile from "./components/Profile";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const web3AuthClientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID;
 const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
@@ -480,14 +478,6 @@ function AppContent() {
                   </RequireAuth>
                 }
               />
-              <Route
-                path="/profile"
-                element={
-                  <RequireAuth>
-                    <Profile />
-                  </RequireAuth>
-                }
-              />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
@@ -522,16 +512,10 @@ function AppContent() {
 }
 
 function App() {
-  const queryClientRef = React.useRef();
-  if (!queryClientRef.current) {
-    queryClientRef.current = new QueryClient();
-  }
   return (
-    <QueryClientProvider client={queryClientRef.current}>
-      <Web3AuthProvider>
-        <AppContent />
-      </Web3AuthProvider>
-    </QueryClientProvider>
+    <Web3AuthProvider>
+      <AppContent />
+    </Web3AuthProvider>
   );
 }
 
