@@ -38,7 +38,7 @@ export default function Profile() {
 
   const isOwner = !!connectedWallet && viewingWallet === connectedWallet.toLowerCase();
 
-  const { data: profile } = useQuery({
+  const { data: profile, status: profileStatus, isFetching: profileFetching } = useQuery({
     queryKey: ["profile", viewingWallet],
     enabled: !!viewingWallet,
     queryFn: () => getProfile(viewingWallet),
@@ -50,7 +50,7 @@ export default function Profile() {
   });
 
   const ensureProfile = () => {
-    if (!profile && isOwner && connectedWallet) {
+    if (profileStatus === 'success' && !profile && isOwner && connectedWallet) {
       mutation.mutate({
         wallet: connectedWallet,
         displayName: "",
@@ -65,7 +65,7 @@ export default function Profile() {
 
   useEffect(() => {
     ensureProfile();
-  }, [connectedWallet, profile, isOwner]);
+  }, [connectedWallet, profile, profileStatus, isOwner]);
 
   // Local draft profile state to batch updates
   const [draftProfile, setDraftProfile] = useState(null);
