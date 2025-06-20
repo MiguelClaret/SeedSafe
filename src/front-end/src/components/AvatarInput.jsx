@@ -16,6 +16,14 @@ export default function AvatarInput({ defaultUrl, onChange }) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Remove avatar anterior se existir e pertencer ao bucket 'avatars'
+    if (defaultUrl && defaultUrl.includes('/avatars/')) {
+      const path = defaultUrl.split('/avatars/')[1];
+      if (path) {
+        await supabase.storage.from('avatars').remove([path]);
+      }
+    }
+
     // 1. faz upload para Supabase
     const filePath = `${wallet}/${Date.now()}_${file.name}`;
     const { error } = await supabase
