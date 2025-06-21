@@ -1,129 +1,170 @@
-import React from 'react';
-import { Calendar, MapPin, User, ChevronRight, Leaf, FileText, AlertCircle, Check, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react'
+import { usePublicClient, useWalletClient } from 'wagmi'
+import { CONTRACT_ADDRESSES } from '../../config/neroConfig'
+import { Leaf, Calendar, User, Check, Loader2 } from 'lucide-react'
 
-const StatusBadge = ({ status }) => {
-  switch(status) {
-    case 'pending':
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-          <AlertCircle className="h-3 w-3 mr-1" />
-          Pending
-        </span>
-      );
-    case 'approved':
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          <Check className="h-3 w-3 mr-1" />
-          Approved
-        </span>
-      );
-    case 'rejected':
-      return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-          <X className="h-3 w-3 mr-1" />
-          Rejected
-        </span>
-      );
-    default:
-      return null;
+const PendingRequests = ({ onSelectAudit }) => {
+  const [harvests, setHarvests] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [approvingId, setApprovingId] = useState(null)
+
+  const publicClient = usePublicClient()
+  const { data: walletClient } = useWalletClient()
+
+  const loadHarvests = async () => {
+    setLoading(true)
+
+    try {
+      if (!publicClient) return
+
+      const currentHarvestId = await publicClient.readContract({
+        address: CONTRACT_ADDRESSES.harvestManager.address,
+        abi: CONTRACT_ADDRESSES.harvestManager.abi,
+        functionName: 'currentHarvestId',
+      })
+
+      const loadedHarvests = []
+
+      for (let i = 0; i < currentHarvestId; i++) {
+        try {
+          const harvest = await publicClient.readContract({
+            address: CONTRACT_ADDRESSES.harvestManager.address,
+            abi: CONTRACT_ADDRESSES.harvestManager.abi,
+            functionName: 'harvests',
+            args: [i],
+          })
+
+          const status = Number(harvest[5])
+          if (status === 0) {
+            const deliveryDate = new Date(Number(harvest[3]) * 1000)
+
+            loadedHarvests.push({
+              id: i,
+              cropType: harvest[0],
+              quantity: parseFloat(harvest[1]?.toString?.() ?? 0),
+              pricePerUnit: parseFloat(harvest[2]?.toString?.() ?? 0),
+              harvestDate: deliveryDate.toISOString(),
+              farmerAddress: harvest[4], // nomeado corretamente
+              documentation: harvest[7],
+              status: 'pending',
+            })
+          }
+        } catch (harvestErr) {
+          console.error(`Erro ao buscar harvest ${i}:`, harvestErr)
+        }
+      }
+
+      setHarvests(loadedHarvests)
+    } catch (err) {
+      console.error('Erro geral ao buscar harvests:', err)
+    }
+
+    setLoading(false)
   }
-};
 
-const PendingRequests = ({ audits, onSelectAudit }) => {
-  // Format the date to be more readable
-  const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-  };
-  
-  // Generate sustainable practices badges
-  const renderPracticeCount = (practices) => {
-    if (!practices || practices.length === 0) return null;
-    
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-800">
-        <Leaf className="h-3 w-3 mr-1" />
-        {practices.length} practices
-      </span>
-    );
-  };
+  const approveHarvest = async (harvest) => {
+    if (!walletClient || !publicClient) {
+      alert('Carteira não conectada ou client não disponível.')
+      return
+    }
+
+    try {
+      setApprovingId(harvest.id)
+
+      const txHash = await walletClient.writeContract({
+        address: CONTRACT_ADDRESSES.harvestManager.address,
+        abi: CONTRACT_ADDRESSES.harvestManager.abi,
+        functionName: 'mintHarvest',
+        args: [harvest.farmerAddress, harvest.id],
+      })
+
+      await publicClient.waitForTransactionReceipt({ hash: txHash })
+
+      alert(`✅ Safra ${harvest.id} aprovada com sucesso!`)
+      await loadHarvests()
+    } catch (err) {
+      console.error('❌ Erro ao aprovar safra:', err)
+      alert(err?.shortMessage || 'Erro ao aprovar safra.')
+    } finally {
+      setApprovingId(null)
+    }
+  }
+
+  useEffect(() => {
+    loadHarvests()
+  }, [publicClient])
 
   return (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-      <div className="divide-y divide-gray-200">
-        {audits.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">
-            No audit requests match your criteria.
-          </div>
-        ) : (
-          audits.map(audit => (
-            <div 
-              key={audit.id}
-              className="p-6 hover:bg-gray-50 cursor-pointer transition-colors duration-200 flex flex-col md:flex-row md:items-center"
-              onClick={() => onSelectAudit(audit.id)}
-            >
-              <div className="flex-grow">
-                <div className="flex items-center mb-2">
-                  <h3 className="text-lg font-medium text-gray-800 mr-3">
-                    {audit.quantity}kg {audit.cropType}
-                  </h3>
-                  <StatusBadge status={audit.status} />
-                </div>
-                
-                <div className="flex flex-col md:flex-row md:items-center text-sm text-gray-600 space-y-1 md:space-y-0 md:space-x-4">
-                  <div className="flex items-center">
-                    <User className="h-4 w-4 text-gray-500 mr-1.5" />
-                    {audit.farmerName}
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <MapPin className="h-4 w-4 text-gray-500 mr-1.5" />
-                    {audit.location}
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <Calendar className="h-4 w-4 text-gray-500 mr-1.5" />
-                    {formatDate(audit.harvestDate)}
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <FileText className="h-4 w-4 text-gray-500 mr-1.5" />
-                    {audit.documents.length} Documents
-                  </div>
-                </div>
-                
-                <div className="mt-2">
-                  {renderPracticeCount(audit.sustainablePractices)}
-                  
-                  {audit.status === 'pending' && (
-                    <span className="ml-2 text-xs text-yellow-600">
-                      Submitted {formatDate(audit.submissionDate)}
-                    </span>
-                  )}
-                  
-                  {audit.status === 'approved' && (
-                    <span className="ml-2 text-xs text-green-600">
-                      Approved {formatDate(audit.auditDate)} • {audit.carbonCredits} TCO2e
-                    </span>
-                  )}
-                  
-                  {audit.status === 'rejected' && (
-                    <span className="ml-2 text-xs text-red-600">
-                      Rejected {formatDate(audit.auditDate)}
-                    </span>
-                  )}
-                </div>
-              </div>
-              
-              <div className="mt-4 md:mt-0">
-                <ChevronRight className="h-5 w-5 text-gray-400" />
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-};
+    <div className="grid gap-6">
+      <h2 className="text-xl font-semibold text-gray-800">Pending Harvests</h2>
 
-export default PendingRequests;
+      {loading ? (
+        <div className="flex items-center justify-center py-12 text-gray-500">
+          <Loader2 className="animate-spin h-6 w-6 mr-2" />
+          Carregando safras...
+        </div>
+      ) : harvests.length === 0 ? (
+        <div className="text-gray-500">Nenhuma safra pendente no momento.</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {harvests.map((harvest) => (
+            <div
+              key={harvest.id}
+              className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
+              onClick={() => onSelectAudit(harvest)}
+            >
+              <div className="flex items-center mb-2">
+                <Leaf className="h-5 w-5 text-green-600 mr-2" />
+                <h3 className="text-lg font-medium text-gray-800">
+                  {harvest.cropType}
+                </h3>
+              </div>
+
+              <div className="text-sm text-gray-600 space-y-1">
+                <div className="flex items-center">
+                  <User className="h-4 w-4 text-gray-500 mr-2" />
+                  <span className="font-medium">{harvest.farmerAddress}</span>
+                </div>
+
+                <div className="flex items-center">
+                  <Calendar className="h-4 w-4 text-gray-500 mr-2" />
+                  <span>
+                    Entrega: {new Date(harvest.harvestDate).toLocaleDateString()}
+                  </span>
+                </div>
+
+                <p>
+                  Quantidade: <strong>{harvest.quantity}</strong> kg
+                </p>
+              </div>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  approveHarvest(harvest)
+                }}
+                disabled={approvingId === harvest.id}
+                className={`mt-4 w-full ${
+                  approvingId === harvest.id
+                    ? 'bg-green-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700'
+                } text-white text-sm px-3 py-2 rounded-md flex items-center justify-center transition`}
+              >
+                {approvingId === harvest.id ? (
+                  <Loader2 className="animate-spin h-4 w-4" />
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Aprovar Safra
+                  </>
+                )}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default PendingRequests

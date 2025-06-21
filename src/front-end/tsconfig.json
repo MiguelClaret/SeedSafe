@@ -21,6 +21,6 @@
       "@components/*": ["components/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "hardhat"],
   "exclude": ["node_modules", "dist"]
 } 
