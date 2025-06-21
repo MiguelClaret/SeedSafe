@@ -50,22 +50,41 @@ export default function Profile() {
   });
 
   const ensureProfile = () => {
-    if (profileStatus === 'success' && !profile && isOwner && connectedWallet) {
-      mutation.mutate({
-        wallet: connectedWallet,
-        displayName: "",
-        description: "",
-        location: "",
-        website: "",
-        badges: [],
-        avatarUrl: DEFAULT_AVATAR,
-      });
+    const roleMap = {
+      admin: 1,
+      auditor: 2,
+      producer: 3,
+      investor: 4,
+    };
+    const desiredRole = roleMap[walletInfo?.role] ?? null;
+
+    if (profileStatus === 'success' && isOwner && connectedWallet && desiredRole) {
+      // Novo perfil: cria com valores padrão + role correto
+      if (!profile) {
+        mutation.mutate({
+          wallet: connectedWallet,
+          displayName: "",
+          description: "",
+          location: "",
+          website: "",
+          badges: [],
+          avatarUrl: DEFAULT_AVATAR,
+          role: desiredRole,
+        });
+      }
+      // Perfil existente mas sem role ou role diferente: atualiza somente se necessário
+      else if (profile.role !== desiredRole) {
+        mutation.mutate({
+          ...profile,
+          role: desiredRole,
+        });
+      }
     }
   };
 
   useEffect(() => {
     ensureProfile();
-  }, [connectedWallet, profile, profileStatus, isOwner]);
+  }, [connectedWallet, profile, profileStatus, isOwner, walletInfo]);
 
   // Local draft profile state to batch updates
   const [draftProfile, setDraftProfile] = useState(null);
@@ -139,18 +158,44 @@ export default function Profile() {
     queryFn: () => fetchClosedPurchases(viewingWallet),
   });
 
+  // --- Role badge helpers ---
+  const roleLabelMap = {
+    1: "Admin",
+    2: "Auditor",
+    3: "Producer",
+    4: "Investor",
+  };
+
+  const roleLabel = roleLabelMap[draftProfile?.role];
+
+  // Define cor do badge conforme o papel
+  const roleColorClass = (() => {
+    switch (draftProfile?.role) {
+      case 3: // Producer
+        return "bg-green-600";
+      case 4: // Investor
+        return "bg-blue-600";
+      default:
+        return "bg-gray-600";
+    }
+  })();
+
   if (!viewingWallet) {
     return <p className="p-4">Connect your wallet to view your profile.</p>;
   }
 
-  const EditButton = ({ onClick }) => {
+  const EditButton = ({ onClick, active = false }) => {
     if (!isOwner) return null;
     return (
       <button
         className="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 transform hover:scale-110"
         onClick={onClick}
       >
-        <FaPencilAlt className="text-gray-500 hover:text-green-600 transition-colors duration-200" />
+        <FaPencilAlt
+          className={`${
+            active ? "text-green-600" : "text-gray-500"
+          } hover:text-green-600 transition-colors duration-200`}
+        />
       </button>
     );
   };
@@ -212,26 +257,38 @@ export default function Profile() {
               />
               {isOwner && (
                 <div className="absolute -bottom-2 -right-2">
-                  <EditButton onClick={() => setEditing({ ...editing, avatar: true })} />
+                  <EditButton
+                    onClick={() => setEditing({ ...editing, avatar: true })}
+                    active={editing.avatar}
+                  />
                 </div>
               )}
             </div>
             <div className="text-center">
-              <h2 className="text-xl font-medium text-gray-900">{draftProfile?.displayName || "Your Name"}</h2>
-              <p className="text-sm text-gray-500">{draftProfile?.location || "Location"}</p>
+              <h2 className="text-xl font-medium text-gray-900 flex items-center justify-center gap-2">
+                {draftProfile?.displayName || "Your Name"}
+                {roleLabel && (
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-semibold ${roleColorClass} text-white uppercase tracking-wide`}
+                  >
+                    {roleLabel}
+                  </span>
+                )}
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">{draftProfile?.location || "Location"}</p>
             </div>
           </div>
 
           {/* Avatar editor */}
           {isOwner && editing.avatar && (
             <div className="mt-4 animate-fadeIn">
-              <AvatarInput
+      <AvatarInput
                 defaultUrl={draftProfile?.avatarUrl}
                 onChange={(url) => {
                   updateField("avatarUrl", url);
                   setEditing({ ...editing, avatar: false });
                 }}
-              />
+      />
             </div>
           )}
 
@@ -243,7 +300,7 @@ export default function Profile() {
               value={draftProfile?.displayName}
               field="displayName"
               hint={FIELD_HINTS.displayName}
-            />
+      />
             <ProfileField
               label="Location"
               value={draftProfile?.location}
@@ -276,28 +333,29 @@ export default function Profile() {
               {isOwner && (
                 <EditButton
                   onClick={() => setEditing({ ...editing, badges: !editing.badges })}
+                  active={editing.badges}
                 />
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
-              {SustainabilityBadges.map((b) => {
+        <div className="flex flex-wrap gap-2">
+          {SustainabilityBadges.map((b) => {
                 const selected = draftProfile?.badges?.includes(b);
-                return (
-                  <Badge
-                    key={b}
-                    label={b}
-                    selected={selected}
-                    onToggle={(sel) => {
+            return (
+              <Badge
+                key={b}
+                label={b}
+                selected={selected}
+                onToggle={(sel) => {
                       if (!editing.badges || !isOwner) return;
                       const current = new Set(draftProfile?.badges || []);
-                      sel ? current.add(b) : current.delete(b);
-                      updateField("badges", Array.from(current));
-                    }}
-                  />
-                );
-              })}
-            </div>
-          </div>
+                  sel ? current.add(b) : current.delete(b);
+                  updateField("badges", Array.from(current));
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
         </div>
 
         {/* Right column - Closed Purchases */}

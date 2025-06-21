@@ -5,6 +5,8 @@ import { Link, useLocation } from "react-router-dom"
 import logoSvg from "../assets/logo_svg.svg"
 import { ConnectButton } from '@rainbow-me/rainbowkit'; // Import RainbowKit ConnectButton
 import { FaUserCircle } from "react-icons/fa";
+import { useQuery } from "@tanstack/react-query"
+import { getProfile } from "../services/profileService"
 
 // Helper function to shorten address
 const shortenAddress = (address) => {
@@ -16,6 +18,17 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isMobileScreen, setIsMobileScreen] = useState(window.innerWidth < 768)
   const location = useLocation()
+
+  // --- fetch profile for navbar display ---
+  const { data: navbarProfile } = useQuery({
+    queryKey: ["navbarProfile", userAddress],
+    enabled: !!userAddress,
+    queryFn: () => getProfile(userAddress),
+    staleTime: 60 * 1000, // 1 min
+  })
+
+  const displayName = navbarProfile?.displayName || null
+  const avatarUrl = navbarProfile?.avatarUrl || null
 
   // Atualiza o estado isMobileScreen quando a janela é redimensionada
   useEffect(() => {
@@ -149,9 +162,13 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
                     to="/profile"
                     className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition-colors"
                   >
-                    <FaUserCircle className={`text-xl ${userRole === 'producer' ? 'text-green-600' : 'text-blue-600'}`} />
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="Avatar" className="w-6 h-6 rounded-full object-cover" />
+                    ) : (
+                      <FaUserCircle className={`text-xl ${userRole === 'producer' ? 'text-green-600' : 'text-blue-600'}`} />
+                    )}
                     <span className="text-sm font-medium text-gray-700">
-                      {shortenAddress(userAddress)}
+                      {displayName || shortenAddress(userAddress)}
                     </span>
                   </Link>
                   <button
@@ -237,9 +254,13 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-2 py-2 hover:text-green-700 transition-colors"
                 >
-                  <FaUserCircle className={`text-xl ${userRole === 'producer' ? 'text-green-600' : 'text-blue-600'}`} />
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Avatar" className="w-6 h-6 rounded-full object-cover" />
+                  ) : (
+                    <FaUserCircle className={`text-xl ${userRole === 'producer' ? 'text-green-600' : 'text-blue-600'}`} />
+                  )}
                   <span className="text-sm font-medium">
-                    {shortenAddress(userAddress)}
+                    {displayName || shortenAddress(userAddress)}
                   </span>
                 </Link>
                 <button
