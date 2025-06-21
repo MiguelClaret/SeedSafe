@@ -186,15 +186,15 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
               </div>
             )}
 
-            <button
-              onClick={toggleMobileMenu}
-              className="text-xl sm:text-2xl p-2 focus:outline-none transition-transform duration-300"
-              aria-label="Toggle menu"
-            >
-              <i
-                className={`fas ${isMobileMenuOpen ? "fa-times rotate-180" : "fa-bars"} transition-transform duration-300`}
-              ></i>
-            </button>
+          <button
+            onClick={toggleMobileMenu}
+            className="text-xl sm:text-2xl p-2 focus:outline-none transition-transform duration-300"
+            aria-label="Toggle menu"
+          >
+            <i
+              className={`fas ${isMobileMenuOpen ? "fa-times rotate-180" : "fa-bars"} transition-transform duration-300`}
+            ></i>
+          </button>
           </div>
         )}
 
