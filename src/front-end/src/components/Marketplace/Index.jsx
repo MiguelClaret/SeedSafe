@@ -16,7 +16,7 @@ import MarketplaceHowItWorksButton from "./HowItWorksButton";
 import HarvestManagerABI from "../../abi/abiHarvest.json";
 
 // Novo endereço real do contrato na chain:
-const harvestManagerAddress = "0xC86A18Bad39Fa0cC90333B7eA5D1b23494f626FA";
+const harvestManagerAddress = '0xE1F625A0787753F9A1bF82561c2F3C3666c4381c';
 const NERO_RPC_URL = "https://rpc-testnet.nerochain.io";
 const NERO_CHAIN_ID = 689;
 const NERO_USD_RATE = 0.000134;
