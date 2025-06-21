@@ -22,7 +22,7 @@ export const CONTRACT_ADDRESSES = {
   entryPoint: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
   accountFactory: "0x9406Cc6185a346906296840746125a0E44976454",
   harvestManager: {
-    address: '0xddaAd340b0f1Ef65169Ae5E41A8b10776a75482d',
+    address: '0xE1F625A0787753F9A1bF82561c2F3C3666c4381c',
     abi: abiHarvest
   },
   tco2Token: {
