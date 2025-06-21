@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 import {
   Leaf,
   Calendar,
@@ -20,6 +20,8 @@ import {
   Check,
 } from "lucide-react";
 import SecurityInfoCard from "./SecurityInfoCard";
+import UploadCropFile from "./uploadComponent";
+
 
 // Tooltip component
 const Tooltip = ({ children, content, position = "top" }) => {
@@ -77,7 +79,7 @@ const SustainablePracticeCard = ({
   icon: Icon,
   isSelected,
   onChange,
-  disabled
+  disabled,
 }) => {
   return (
     <div
@@ -85,9 +87,7 @@ const SustainablePracticeCard = ({
         isSelected
           ? "border-green-500 bg-green-50 shadow-[0_0_15px_rgba(74,222,128,0.5)]"
           : "border-gray-200 bg-white hover:bg-gray-50"
-      } ${
-        disabled ? 'opacity-50 cursor-not-allowed' : ''
-      }`}
+      } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
       onClick={() => !disabled && onChange(id, !isSelected)}
     >
       <div className="flex items-start">
@@ -135,11 +135,24 @@ const CropForm = ({
 }) => {
   const navigate = useNavigate();
 
+
+  const handleFileUpload = (links) => {
+    console.log("Links recebidos do filho:", links);
+    formData.doc = links
+  };
+
   // LOG PROPS PARA DEBUG
-  console.log('[CropForm] Props recebidas no início do render:', { isProcessing, registrationComplete, transactionHash });
+  console.log("[CropForm] Props recebidas no início do render:", {
+    isProcessing,
+    registrationComplete,
+    transactionHash,
+  });
 
   useEffect(() => {
-    console.log('[CropForm] useEffect DETECTED isProcessing prop change TO:', isProcessing);
+    console.log(
+      "[CropForm] useEffect DETECTED isProcessing prop change TO:",
+      isProcessing
+    );
   }, [isProcessing]);
 
   // Map to track which cards are selected
@@ -235,16 +248,18 @@ const CropForm = ({
   // Override submit to check validation
   const onSubmit = (e) => {
     e.preventDefault();
-    console.log('[CropForm] Submit button clicked');
+    console.log("[CropForm] Submit button clicked");
     // Check validation errors before submitting
     if (dateError || areaError) {
-      return; 
+      return;
     }
     // If registration is complete and user clicks "Next Step"
     // O botão "Next Step" agora está dentro do modal de sucesso e tem seu próprio onClick.
     // Esta lógica de onSubmit deve focar apenas no registro da safra.
     if (registrationComplete) {
-      console.log('[CropForm] Registration is already complete. Preventing re-submission.');
+      console.log(
+        "[CropForm] Registration is already complete. Preventing re-submission."
+      );
       return; // Impede re-submissão se o registro já estiver completo
     }
 
@@ -252,7 +267,9 @@ const CropForm = ({
     // O botão "Next Step" agora está dentro do modal de sucesso e tem seu próprio onClick.
     // Esta lógica de onSubmit deve focar apenas no registro da safra.
     if (registrationComplete) {
-      console.log('[CropForm] Registration is already complete. Preventing re-submission.');
+      console.log(
+        "[CropForm] Registration is already complete. Preventing re-submission."
+      );
       return; // Impede re-submissão se o registro já estiver completo
     }
     handleStepOneSubmit(e);
@@ -483,33 +500,35 @@ const CropForm = ({
           />
         </div>
         <div>
-  <div className="flex items-center mb-1">
-    <label className="block text-sm font-medium text-gray-700">
-      Payment Method
-    </label>
-    <Tooltip
-      content="Choose how you'd like to pay for the transaction fee. Native token, ERC20 or NFT."
-      position="right"
-    >
-      <HelpCircle className="h-4 w-4 text-gray-400 ml-1 cursor-help" />
-    </Tooltip>
-  </div>
-  <select
-    name="paymentType"
-    value={formData.paymentType || "0"}
-    onChange={handleInputChange}
-    className="w-full p-2 bg-white text-gray-800 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
-    required
-    disabled={isProcessing || registrationComplete}
-  >
-    <option value="0">Native Token</option>
-    <option value="1">ERC20 Token</option>
-    <option value="2">NFT</option>
-  </select>
-  <p className="text-xs text-gray-500 mt-1">
-    Choose how to pay for the gas of this transaction.
-  </p>
-</div>
+          <div className="flex items-center mb-1">
+            <label className="block text-sm font-medium text-gray-700">
+              Payment Method
+            </label>
+            <Tooltip
+              content="Choose how you'd like to pay for the transaction fee. Native token, ERC20 or NFT."
+              position="right"
+            >
+              <HelpCircle className="h-4 w-4 text-gray-400 ml-1 cursor-help" />
+            </Tooltip>
+          </div>
+          <select
+            name="paymentType"
+            value={formData.paymentType || "0"}
+            onChange={handleInputChange}
+            className="w-full p-2 bg-white text-gray-800 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            required
+            disabled={isProcessing || registrationComplete}
+          >
+            <option value="0">Native Token</option>
+            <option value="1">ERC20 Token</option>
+            <option value="2">NFT</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Choose how to pay for the gas of this transaction.
+          </p>
+        </div>
+
+        <UploadCropFile onUploadComplete={handleFileUpload} />
 
 
         <div className="sustainable-practices-container">
@@ -550,8 +569,12 @@ const CropForm = ({
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-xl flex flex-col items-center">
               <Loader className="h-8 w-8 animate-spin text-green-600 mb-4" />
-              <p className="text-lg font-medium text-gray-800">Processing your registration...</p>
-              <p className="text-sm text-gray-600 mt-2">This may take a few moments</p>
+              <p className="text-lg font-medium text-gray-800">
+                Processing your registration...
+              </p>
+              <p className="text-sm text-gray-600 mt-2">
+                This may take a few moments
+              </p>
             </div>
           </div>
         )}
@@ -560,13 +583,17 @@ const CropForm = ({
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg shadow-xl flex flex-col items-center max-w-md">
               <CheckCircle className="h-12 w-12 text-green-600 mb-4" />
-              <h3 className="text-xl font-bold text-gray-800 mb-2">Great! Your crop was registered!</h3>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">
+                Great! Your crop was registered!
+              </h3>
               <p className="text-gray-600 text-center mb-4">
                 Your crop has been successfully registered on the blockchain.
               </p>
               {transactionHash && (
                 <div className="w-full bg-gray-50 p-3 rounded-lg mb-4">
-                  <p className="text-sm text-gray-600 mb-1">Transaction Hash:</p>
+                  <p className="text-sm text-gray-600 mb-1">
+                    Transaction Hash:
+                  </p>
                   <div className="flex items-center gap-2">
                     <code className="text-xs bg-gray-100 p-2 rounded flex-1 overflow-hidden text-ellipsis">
                       {shortenHash(transactionHash)}
@@ -576,14 +603,18 @@ const CropForm = ({
                       onClick={(e) => copyToClipboard(transactionHash, e)}
                       className="p-2 hover:bg-gray-200 rounded transition-colors"
                     >
-                      {copyStatus ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      {copyStatus ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                 </div>
               )}
               <button
                 type="button"
-                onClick={() => navigate('/marketplace')}
+                onClick={() => navigate("/marketplace")}
                 className="w-full py-3 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 Go to Marketplace
@@ -600,8 +631,8 @@ const CropForm = ({
               disabled={isProcessing || dateError || areaError}
               className={`py-3 px-6 rounded-lg text-white font-medium flex items-center gap-2 ${
                 isProcessing || dateError || areaError
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-green-600 hover:bg-green-700'
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-green-600 hover:bg-green-700"
               }`}
             >
               {isProcessing ? (

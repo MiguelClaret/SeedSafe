@@ -71,7 +71,7 @@ const RegistrationProcess = ({ setCurrentPage }) => {
       const quantity = parseInt(formData.quantity);
       const price = 25; // Valor fixo para exemplo
       const deliveryDate = Math.floor(new Date(formData.harvestDate).getTime() / 1000);
-      const doc = formData.location || "doc://placeholder";
+      const doc = formData.doc || "doc://placeholder";
       // Envia UserOp via helper
       const userOpHash = await registerHarvestUserOp(web3authProvider, {
         crop,
