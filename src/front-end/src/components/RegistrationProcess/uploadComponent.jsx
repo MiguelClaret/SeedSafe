@@ -20,11 +20,15 @@ const UploadCropFile = ({ onUploadComplete }) => {
     files.forEach((file) => formData.append("imagens", file)); // backend espera "imagens"
 
     try {
-      const response = await axios.post("http://127.0.0.1:5000/document/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await axios.post(
+        "https://seedsafe.onrender.com/document/upload",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       const links = response.data.links;
       alert("Crop documents uploaded successfully!");
@@ -34,7 +38,6 @@ const UploadCropFile = ({ onUploadComplete }) => {
       if (onUploadComplete) {
         onUploadComplete(links); // envia os links para o componente pai
       }
-
     } catch (err) {
       console.error(err);
       alert("Upload failed. Please try again.");
@@ -64,7 +67,11 @@ const UploadCropFile = ({ onUploadComplete }) => {
         onClick={handleUpload}
         disabled={!files.length || uploading}
         className={`mt-4 w-full flex items-center justify-center px-4 py-2 rounded-md text-white font-semibold transition
-          ${!files.length || uploading ? "bg-gray-300 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}
+          ${
+            !files.length || uploading
+              ? "bg-gray-300 cursor-not-allowed"
+              : "bg-green-600 hover:bg-green-700"
+          }`}
       >
         {uploading ? "Uploading..." : "Upload Files"}
       </button>
