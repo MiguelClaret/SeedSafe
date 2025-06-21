@@ -16,8 +16,7 @@ import { Link } from "react-router-dom";
 import FiltersPanel from "./FiltersPanel";
 import CropCard from "./CropCard";
 import PurchaseModal from "./PurchaseModal";
-import ChatModal from "./ChatModal"; // Adicionar import do ChatModal
-import { mockListings } from "./mockData";
+import ChatModal from "./ChatModal";
 import MarketplaceOnboarding from "./MarketplaceOnboarding";
 import BlockchainSecurityInfo from "./BlockchainSecurityInfo";
 import MarketplaceHowItWorksButton from "./HowItWorksButton";
@@ -221,8 +220,8 @@ const Marketplace = ({ walletInfo }) => {
   const [sortOrder, setSortOrder] = useState("default");
   const [selectedListing, setSelectedListing] = useState(null);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  const [showChatModal, setShowChatModal] = useState(false); // Estado para o chat
-  const [selectedChatListing, setSelectedChatListing] = useState(null); // Listing selecionado para chat
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [selectedChatListing, setSelectedChatListing] = useState(null);
   const [useMockData, setUseMockData] = useState(true);
   const [purchaseStatus, setPurchaseStatus] = useState({
     state: "idle",
@@ -633,12 +632,16 @@ const Marketplace = ({ walletInfo }) => {
         </>
       )}
 
-      {selectedChatListing && (
+      {selectedChatListing && showChatModal && (
         <ChatModal
           isOpen={showChatModal}
           onClose={handleCloseChatModal}
-          farmerName={selectedChatListing.farmerName}
-          cropType={selectedChatListing.cropType}
+          userId={walletInfo?.address}
+          farmerId={
+            selectedChatListing.farmerWallet ||
+            selectedChatListing.wallet ||
+            selectedChatListing.owner
+          }
         />
       )}
 

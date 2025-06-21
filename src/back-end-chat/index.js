@@ -25,21 +25,15 @@ app.post('/send-message', async (req, res) => {
   const { data, error } = await supabase
     .from('message')
     .insert([{ from, to, content }])
-    .select('*, from_user:from(full_name)');
+    .select()
+    .single();
 
   if (error) {
     console.error('Erro ao inserir mensagem:', error);
     return res.status(400).json({ error });
   }
 
-  const msg = {
-    id: data[0].id,
-    from: data[0].from,
-    to: data[0].to,
-    content: data[0].content,
-    created_at: data[0].created_at,
-    sender_name: data[0].from_user.full_name
-  };
+  const msg = data;
 
   io.emit('newMessage', msg); // Emitir para todos os clientes conectados
   res.status(200).json(msg);
@@ -50,7 +44,10 @@ app.get('/messages', async (req, res) => {
   const { from, to } = req.query;
 
   const { data, error } = await supabase
-    .rpc('get_messages_with_names', { id1: parseInt(from), id2: parseInt(to) });
+    .from('message')
+    .select('*')
+    .or(`and(from.eq.${from},to.eq.${to}),and(from.eq.${to},to.eq.${from})`)
+    .order('created_at', { ascending: true });
 
   if (error) {
     console.error('Erro ao buscar mensagens:', error);

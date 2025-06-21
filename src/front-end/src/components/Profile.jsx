@@ -12,6 +12,7 @@ import { FaPencilAlt } from "react-icons/fa";
 import { ethers } from "ethers";
 import HarvestManagerABI from "../abi/abiHarvest.json";
 import { useParams } from "react-router-dom";
+import ChatModal from "./Marketplace/ChatModal";
 
 // Constants
 const NERO_RPC_URL = "https://rpc-testnet.nerochain.io";
@@ -124,6 +125,9 @@ export default function Profile() {
     website: false,
     badges: false,
   });
+
+  // Chat modal visibility
+  const [chatOpen, setChatOpen] = useState(false);
 
   // Query for closed purchases
   const fetchClosedPurchases = async (buyer) => {
@@ -277,6 +281,14 @@ export default function Profile() {
               </h2>
               <p className="text-sm text-gray-500 mt-1">{draftProfile?.location || "Location"}</p>
             </div>
+            {!isOwner && (
+              <button
+                onClick={() => setChatOpen(true)}
+                className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+              >
+                Message
+              </button>
+            )}
           </div>
 
           {/* Avatar editor */}
@@ -412,6 +424,15 @@ export default function Profile() {
         <div className="fixed bottom-6 right-6 bg-green-600 text-white px-4 py-2 rounded-full shadow-lg animate-fadeIn">
           Saving...
         </div>
+      )}
+
+      {chatOpen && !isOwner && (
+        <ChatModal
+          isOpen={chatOpen}
+          onClose={() => setChatOpen(false)}
+          userId={walletInfo?.address}
+          farmerId={viewingWallet}
+        />
       )}
     </div>
   );

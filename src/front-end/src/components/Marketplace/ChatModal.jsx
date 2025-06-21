@@ -1,41 +1,54 @@
 import { useState, useRef, useEffect } from "react";
 import io from "socket.io-client";
 import axios from "axios";
-import {
-  X,
-  Send,
-  User,
-  MessageCircle,
-  Smile,
-  Paperclip,
-} from "lucide-react";
+import { X, Send, User } from "lucide-react";
+import { getProfile } from "../../services/profileService";
+import { useQuery } from "@tanstack/react-query";
 
 const socket = io("http://localhost:3001");
 
-const ChatModal = ({ isOpen, onClose, userId, farmerId, farmerName, cropType }) => {
+const ChatModal = ({ isOpen, onClose, userId, farmerId }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
+  // Perfis
+  const { data: myProfile } = useQuery({
+    queryKey: ["chatModalProfile", userId],
+    enabled: !!userId,
+    queryFn: () => getProfile(userId),
+    staleTime: 120_000,
+  });
+
+  const { data: farmerProfile } = useQuery({
+    queryKey: ["chatModalProfile", farmerId],
+    enabled: !!farmerId,
+    queryFn: () => getProfile(farmerId),
+    staleTime: 120_000,
+  });
+
+  const myAddr = userId?.toLowerCase();
+  const peerAddr = farmerId?.toLowerCase();
+
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && myAddr && peerAddr) {
       axios
-        .get(`http://localhost:3001/messages?from=${userId}&to=${farmerId}`)
+        .get(`http://localhost:3001/messages?from=${myAddr}&to=${peerAddr}`)
         .then((res) => setMessages(res.data))
         .catch(console.error);
     }
-  }, [isOpen, userId, farmerId]);
+  }, [isOpen, myAddr, peerAddr]);
 
   useEffect(() => {
     socket.on("newMessage", (msg) => {
       const isRelevant =
-        (msg.from === userId && msg.to === farmerId) ||
-        (msg.from === farmerId && msg.to === userId);
+        (msg.from === myAddr && msg.to === peerAddr) ||
+        (msg.from === peerAddr && msg.to === myAddr);
       if (isRelevant) setMessages((prev) => [...prev, msg]);
     });
     return () => socket.off("newMessage");
-  }, [userId, farmerId]);
+  }, [myAddr, peerAddr]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -48,10 +61,10 @@ const ChatModal = ({ isOpen, onClose, userId, farmerId, farmerName, cropType }) 
   }, [isOpen]);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !myAddr || !peerAddr) return;
     const payload = {
-      from: userId,
-      to: farmerId,
+      from: myAddr,
+      to: peerAddr,
       content: newMessage.trim(),
     };
     try {
@@ -83,11 +96,16 @@ const ChatModal = ({ isOpen, onClose, userId, farmerId, farmerName, cropType }) 
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-md h-[600px] flex flex-col animate-fadeIn">
         <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-amber-100 rounded-t-lg">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-amber-600 rounded-full flex items-center justify-center relative">
-              <User className="w-5 h-5 text-white" />
-            </div>
+            <img
+              src={
+                farmerProfile?.avatarUrl ||
+                "https://storage.googleapis.com/seedsafe-assets/default-avatar.png"
+              }
+              alt="avatar"
+              className="w-10 h-10 rounded-full object-cover border-2 border-amber-600"
+            />
             <div>
-              <h3 className="font-semibold text-gray-800">{farmerName}</h3>
+              <h3 className="font-semibold text-gray-800">{farmerProfile?.displayName || farmerId?.slice(0,10)+"..."}</h3>
               <p className="text-xs text-green-600 flex items-center">
                 <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
                 Online now
@@ -103,29 +121,51 @@ const ChatModal = ({ isOpen, onClose, userId, farmerId, farmerName, cropType }) 
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.from === userId ? "justify-end" : "justify-start"}`}
-            >
+          {messages.map((msg) => {
+            const isMine = msg.from === myAddr;
+            const avatarUrl = isMine
+              ? myProfile?.avatarUrl
+              : farmerProfile?.avatarUrl;
+            return (
               <div
-                className={`max-w-[80%] rounded-lg px-3 py-2 ${
-                  msg.from === userId
-                    ? "bg-amber-600 text-white"
-                    : "bg-white text-gray-800 border border-gray-200 shadow-sm"
-                }`}
+                key={msg.id ?? msg.created_at}
+                className={`flex items-end gap-2 mb-2 ${isMine ? "justify-end" : "justify-start"}`}
               >
-                <p className="text-sm leading-relaxed">{msg.content}</p>
-                <p
-                  className={`text-xs mt-1 ${
-                    msg.from === userId ? "text-amber-100" : "text-gray-500"
+                {!isMine && (
+                  <img
+                    src={
+                      avatarUrl ||
+                      "https://storage.googleapis.com/seedsafe-assets/default-avatar.png"
+                    }
+                    alt="avatar"
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                )}
+                <div
+                  className={`max-w-[75%] rounded-lg px-3 py-2 text-sm break-words ${
+                    isMine
+                      ? "bg-amber-600 text-white"
+                      : "bg-white text-gray-800 border border-gray-200 shadow-sm"
                   }`}
                 >
-                  {formatTime(msg.created_at)} — {msg.sender_name}
-                </p>
+                  {msg.content}
+                  <p className="text-xs mt-1 opacity-80">
+                    {formatTime(msg.created_at)}
+                  </p>
+                </div>
+                {isMine && (
+                  <img
+                    src={
+                      avatarUrl ||
+                      "https://storage.googleapis.com/seedsafe-assets/default-avatar.png"
+                    }
+                    alt="avatar"
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
           <div ref={messagesEndRef} />
         </div>
 
