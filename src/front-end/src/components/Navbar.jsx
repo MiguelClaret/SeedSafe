@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Link, useLocation } from "react-router-dom"
 import logoSvg from "../assets/logo_svg.svg"
 import { ConnectButton } from '@rainbow-me/rainbowkit'; // Import RainbowKit ConnectButton
+import { FaUserCircle } from "react-icons/fa";
 
 // Helper function to shorten address
 const shortenAddress = (address) => {
@@ -129,6 +130,14 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
                       Auditor Panel
                     </Link>
                   )}
+                  {isLoggedIn && (
+                    <Link
+                      to="/profile"
+                      className={`font-medium text-lg relative hover:text-green-700 transition-colors ${isActive("/profile") ? "text-green-700" : ""}`}
+                    >
+                      Profile
+                    </Link>
+                  )}
                 </>
               )}
             </div>
@@ -136,12 +145,15 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
               {isLoggedIn ? (
                 <>
                   {/* Display user info and logout */} 
-                  <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-lg">
-                    <div className={`w-3 h-3 rounded-full ${userRole === 'producer' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                  <Link
+                    to="/profile"
+                    className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    <FaUserCircle className={`text-xl ${userRole === 'producer' ? 'text-green-600' : 'text-blue-600'}`} />
                     <span className="text-sm font-medium text-gray-700">
                       {shortenAddress(userAddress)}
                     </span>
-                  </div>
+                  </Link>
                   <button
                     onClick={onLogout}
                     className="py-2 px-4 rounded-md font-semibold text-sm border border-gray-300 hover:border-red-500 hover:text-red-500 transition-all"
@@ -208,6 +220,11 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
                     Auditor Panel
                   </Link>
                 )}
+                {isLoggedIn && (
+                  <Link to="/profile" className="font-medium hover:text-green-700 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+                    Profile
+                  </Link>
+                )}
               </>
             )}
 
@@ -215,12 +232,16 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
 
             {isLoggedIn ? (
               <>
-                <div className="flex items-center gap-2 py-2">
-                   <div className={`w-3 h-3 rounded-full ${userRole === 'producer' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                   <span className="text-sm font-medium text-gray-700">
-                      {shortenAddress(userAddress)}
-                    </span>
-                </div>
+                <Link
+                  to="/profile"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center gap-2 py-2 hover:text-green-700 transition-colors"
+                >
+                  <FaUserCircle className={`text-xl ${userRole === 'producer' ? 'text-green-600' : 'text-blue-600'}`} />
+                  <span className="text-sm font-medium">
+                    {shortenAddress(userAddress)}
+                  </span>
+                </Link>
                 <button
                   onClick={() => { onLogout(); setIsMobileMenuOpen(false); }}
                   className="w-full text-center py-2 px-6 rounded-md font-semibold border-2 border-gray-200 hover:border-red-500 hover:text-red-500 transition-all"
