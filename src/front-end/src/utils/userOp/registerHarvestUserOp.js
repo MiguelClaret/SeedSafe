@@ -1,4 +1,3 @@
-// src/userOp/registerHarvestUserOp.js
 import { ethers } from "ethers";
 import HarvestManagerAbi from "../../abi/abiHarvest.json";
 import { getUserOperationClient } from "./userOpClient";
@@ -11,10 +10,9 @@ export const registerHarvestUserOp = async (
   { crop, quantity, price, deliveryDate, doc, paymentType = '0' }
 ) => {
   try {
-    // Validar o pagamento antes de prosseguir
     await validatePayment(price, paymentType);
 
-    const contractAddress = CONTRACT_ADDRESSES.harvestManager;
+    const contractAddress = CONTRACT_ADDRESSES.harvestManager.address;
     const client = await getUserOperationClient();
     const builder = await getSimpleAccountBuilder(signer);
 
@@ -28,12 +26,14 @@ export const registerHarvestUserOp = async (
       paymasterAddress: AA_PLATFORM_CONFIG.paymasterAddress,
     });
 
-    // Usar os limites de gas da configuração
     builder.setCallGasLimit(AA_PLATFORM_CONFIG.defaultGasLimit);
     builder.setVerificationGasLimit(AA_PLATFORM_CONFIG.defaultVerificationGasLimit);
     builder.setPreVerificationGas(AA_PLATFORM_CONFIG.defaultPreVerificationGas);
 
-    const contract = new ethers.Contract(contractAddress, HarvestManagerAbi);
+    // Agora inicializa o contrato com o signer associado
+    const contract = new ethers.Contract(contractAddress, HarvestManagerAbi, signer);
+
+    // Importante: precisamos codificar o calldata explicitamente
     const calldata = contract.interface.encodeFunctionData("createHarvest", [
       crop,
       quantity,
@@ -43,7 +43,9 @@ export const registerHarvestUserOp = async (
     ]);
 
     console.log("📤 CallData codificado:", calldata);
+    console.log("🎯 Enviando para o contrato:", contractAddress);
 
+    // Aqui o ponto CRÍTICO corrigido:
     const userOp = await builder.execute(contractAddress, 0, calldata);
     console.log("🛠️ UserOperation montada:", userOp);
     console.log("🧾 paymasterAndData:", builder.getPaymasterAndData());
@@ -59,9 +61,3 @@ export const registerHarvestUserOp = async (
     throw new Error(errorMessage);
   }
 };
-
-
-
-
-
-

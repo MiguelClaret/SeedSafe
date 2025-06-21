@@ -150,6 +150,7 @@ const Marketplace = ({ walletInfo }) => {
   });
 
   return (
+
     <div className="p-8 bg-gray-50 min-h-screen relative">
       <h1 className="text-3xl font-bold mb-4">NERO Chain Marketplace</h1>
       <input
@@ -177,8 +178,8 @@ const Marketplace = ({ walletInfo }) => {
           ))}
         </div>
       )}
+
       <ChatbotWidget />
-    </div>
   );
 };
 
