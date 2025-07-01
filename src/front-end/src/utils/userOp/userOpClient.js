@@ -7,7 +7,3 @@ export const getUserOperationClient = async () => {
     entryPoint: CONTRACT_ADDRESSES.entryPoint,
   });
 };
-
-
-
-

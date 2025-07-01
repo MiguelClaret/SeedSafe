@@ -4,13 +4,7 @@ import { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import { usePublicClient, useWalletClient } from "wagmi";
 import {
-  Search,
-  Filter,
-  ChevronDown,
-  ChevronUp,
-  Leaf,
-  Info,
-  RefreshCw as RefreshIcon
+  Search, Filter, ChevronDown, ChevronUp, Leaf, Info, RefreshCw as RefreshIcon
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import FiltersPanel from "./FiltersPanel";
@@ -21,12 +15,10 @@ import { mockListings } from "./mockData";
 import MarketplaceOnboarding from "./MarketplaceOnboarding";
 import BlockchainSecurityInfo from "./BlockchainSecurityInfo";
 import MarketplaceHowItWorksButton from "./HowItWorksButton";
-
-// Import ABI and contract address
 import HarvestManagerABI from "../../abi/abiHarvest.json";
-const harvestManagerAddress = "0xddaAd340b0f1Ef65169Ae5E41A8b10776a75482d";
 
-// NERO Chain configuration
+// Novo endereço real do contrato na chain:
+const harvestManagerAddress = '0xE1F625A0787753F9A1bF82561c2F3C3666c4381c';
 const NERO_RPC_URL = "https://rpc-testnet.nerochain.io";
 const NERO_CHAIN_ID = 689;
 const NERO_USD_RATE = 0.000134;
@@ -157,8 +149,6 @@ const getMockListingsForDisplay = () => {
   ];
   return mockData;
 };
-
-// Helper Functions
 const formatPrice = (priceInWei) => {
   if (!priceInWei) return "0";
   return ethers.utils.formatUnits(priceInWei, 18);
@@ -173,17 +163,20 @@ const formatDate = (timestamp) => {
 
 const parseDocumentation = (docString) => {
   if (!docString || typeof docString !== 'string') {
+    
     return {
       location: 'Unknown Location',
       area: 0,
       practicesString: '',
       sustainablePractices: []
     };
+
   }
-  const locationMatch = docString.match(/Location: ([^,]+, [^,]+)/);
-  const areaMatch = docString.match(/Area: (\d+(\.\d+)?)ha/);
-  const practicesMatch = docString.match(/Practices: (.*)/);
+  const loc = docString.match(/Localiza..o: (.*?), ..rea:/);
+  const area = docString.match(/..rea: ([0-9.]+)ha/);
+  const practices = docString.match(/Pr.ticas: (.*)/);
   return {
+
     location: locationMatch ? locationMatch[1].trim() : "Unknown Location",
     area: areaMatch ? parseFloat(areaMatch[1]) : 0,
     practicesString: practicesMatch ? practicesMatch[1].trim() : "",
@@ -194,20 +187,10 @@ const parseDocumentation = (docString) => {
 };
 
 const calculateCarbonCredits = (practices, area) => {
-  const practiceCredits = {
-    organic: 1.2,
-    conservation: 0.8,
-    rotation: 0.6,
-    water: 0.4,
-  };
-  let totalCredits = 0;
-  practices.forEach((practice) => {
-    if (practiceCredits[practice]) {
-      totalCredits += practiceCredits[practice];
-    }
-  });
-  const numericArea = parseFloat(area) || 1;
-  return (totalCredits * numericArea).toFixed(2);
+  const credits = { organic: 1.2, conservation: 0.8, rotation: 0.6, water: 0.4 };
+  let total = 0;
+  practices.forEach(p => { if (credits[p]) total += credits[p]; });
+  return (total * (parseFloat(area) || 1)).toFixed(2);
 };
 
 const Marketplace = ({ walletInfo }) => {
@@ -218,7 +201,6 @@ const Marketplace = ({ walletInfo }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [sortOrder, setSortOrder] = useState("default");
   const [selectedListing, setSelectedListing] = useState(null);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false); // Estado para o chat
@@ -235,6 +217,7 @@ const Marketplace = ({ walletInfo }) => {
     cropTypes: [],
   });
   const [showOnboarding, setShowOnboarding] = useState(false);
+
 
   const provider = usePublicClient();
   const { data: walletClient } = useWalletClient();
@@ -259,8 +242,6 @@ const Marketplace = ({ walletInfo }) => {
       }
 
       setIsLoading(true);
-      setError(null);
-
       try {
         console.log("🌾 Connecting to NERO Chain...");
         const neroJsonRpcProvider = new ethers.providers.JsonRpcProvider(NERO_RPC_URL);
@@ -294,7 +275,6 @@ const Marketplace = ({ walletInfo }) => {
         setIsLoading(false);
       }
     };
-
     fetchHarvests();
   }, [provider, useMockData]);
 
@@ -315,6 +295,7 @@ const Marketplace = ({ walletInfo }) => {
     const formatted = listings.map((harvest) => {
       const docInfo = parseDocumentation(harvest.documentation);
       const cropName = harvest.crop || harvest.cropType || "";
+
       const carbonCredits = calculateCarbonCredits(docInfo.sustainablePractices, docInfo.area);
       const priceInWei = harvest.pricePerUnit;
       const displayPriceNERO = formatPrice(priceInWei);
@@ -377,7 +358,7 @@ const Marketplace = ({ walletInfo }) => {
 
   const toggleFilters = () => setShowFilters(!showFilters);
   const handleSearch = (e) => setSearchQuery(e.target.value);
-
+  const toggleFilters = () => setShowFilters(!showFilters);
   const handleInvestClick = (listing) => {
     setSelectedListing(listing);
     setPurchaseStatus({ state: "idle", message: "" });
@@ -463,9 +444,8 @@ const Marketplace = ({ walletInfo }) => {
       }
       setPurchaseStatus({ state: "error", message: errorMessage });
     }
-  };
-
-  const getAnimationDelay = (index) => `${index * 50}ms`;
+    return true;
+  });
 
   return (
     <div className="bg-white rounded-lg shadow-lg mb-5 pt-4 border border-gray-100 animate-fadeIn max-w-7xl mx-auto py-8 px-4 bg-slate-100 min-h-screen">
@@ -515,44 +495,7 @@ const Marketplace = ({ walletInfo }) => {
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-gray-400" />
             </div>
-            <input
-              type="text"
-              placeholder="Search by crop, farmer, or location"
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-300"
-              value={searchQuery}
-              onChange={handleSearch}
-            />
-          </div>
-          <button
-            onClick={toggleFilters}
-            className="bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200 px-4 py-2 rounded-md flex items-center justify-center transition-all duration-300 hover:shadow-md"
-          >
-            <Filter className="h-5 w-5 mr-2" /> Filters{" "}
-            {showFilters ? (
-              <ChevronUp className="h-4 w-4 ml-2" />
-            ) : (
-              <ChevronDown className="h-4 w-4 ml-2" />
-            )}
-          </button>
-          <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
-            className="bg-gray-50 border border-gray-300 text-gray-700 px-4 py-2 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-300"
-          >
-            <option value="default">Sort: Default</option>
-            <option value="price-low">Price: Low to High</option>
-            <option value="price-high">Price: High to Low</option>
-            <option value="carbon">Most Carbon Credits</option>
-          </select>
-        </div>
-        <div
-          className={`transition-all duration-300 overflow-hidden ${
-            showFilters ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-          }`}
-        >
-          {showFilters && (
-            <FiltersPanel filters={filters} setFilters={setFilters} />
-          )}
+          ))}
         </div>
         <div className="mb-4 text-gray-600 flex items-center">
           {isLoading ? (
@@ -667,6 +610,7 @@ const Marketplace = ({ walletInfo }) => {
         .animate-spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
+
     </div>
   );
 };
