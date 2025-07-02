@@ -3,6 +3,7 @@ import { getDefaultConfig } from '@rainbow-me/rainbowkit'
 import { metaMaskWallet, bitgetWallet, gateWallet } from '@rainbow-me/rainbowkit/wallets'
 import { defineChain } from 'viem'
 import { http, WagmiProvider } from 'wagmi'
+import { RainbowKitProvider } from '@rainbow-me/rainbowkit'
 import { rainbowWeb3AuthConnector } from '@/config/rainbowWeb3authConnector'
 import { ConfigContext } from '@/contexts'
 
@@ -102,7 +103,13 @@ export const WrapWagmiProvider: React.FC<WrapWagmiContextProps> = ({ children })
     ],
   })
 
-  return <WagmiProvider config={wagmiConfig}>{children}</WagmiProvider>
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <RainbowKitProvider chains={[neroChain]}>
+        {children}
+      </RainbowKitProvider>
+    </WagmiProvider>
+  )
 }
 
 export { WrapWagmiContext }

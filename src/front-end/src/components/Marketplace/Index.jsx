@@ -16,6 +16,8 @@ import MarketplaceOnboarding from "./MarketplaceOnboarding";
 import BlockchainSecurityInfo from "./BlockchainSecurityInfo";
 import MarketplaceHowItWorksButton from "./HowItWorksButton";
 import HarvestManagerABI from "../../abi/abiHarvest.json";
+import ChatbotWidget from "../ChatbotWidget";
+import ChatModal from "./ChatModal";
 
 // Novo endereço real do contrato na chain:
 const harvestManagerAddress = '0xE1F625A0787753F9A1bF82561c2F3C3666c4381c';
@@ -218,6 +220,10 @@ const Marketplace = ({ walletInfo }) => {
   });
   const [showOnboarding, setShowOnboarding] = useState(false);
 
+
+  // Estados para chat
+  const [chatListing, setChatListing] = useState(null);
+  const [showChatModal, setShowChatModal] = useState(false);
 
   const provider = usePublicClient();
   const { data: walletClient } = useWalletClient();
@@ -447,6 +453,53 @@ const Marketplace = ({ walletInfo }) => {
     return true;
   });
 
+  /* ----------------------- Ações de Investir & Chat ----------------------- */
+  const handleInvestClick = (listing) => {
+    setSelectedListing(listing);
+    setPurchaseStatus({ state: "idle", message: "" });
+    setShowPurchaseModal(true);
+  };
+
+  const handleChatClick = (listing) => {
+    setChatListing(listing);
+    setShowChatModal(true);
+  };
+
+  /* ---------------------------- Confirmar Compra --------------------------- */
+  const handlePurchaseConfirm = async (quantity) => {
+    if (!walletClient || !selectedListing) {
+      setPurchaseStatus({ state: "error", message: "Carteira não conectada." });
+      return;
+    }
+
+    try {
+      setPurchaseStatus({ state: "pending", message: "Aguardando confirmação da transação na carteira..." });
+
+      const totalCostWei = selectedListing.pricePerUnit.mul(ethers.BigNumber.from(quantity));
+
+      // Envia NERO para o produtor (transação simples para fins de demonstração)
+      const txHash = await walletClient.sendTransaction({
+        to: selectedListing.producerAddress,
+        value: totalCostWei,
+        chainId: NERO_CHAIN_ID,
+      });
+
+      setPurchaseStatus({ state: "pending", message: `Transação enviada: ${txHash.slice(0, 10)}... Aguarde confirmação.` });
+
+      // Opcional: aguardar 1 confirmação pela RPC pública
+      const rpc = new ethers.providers.JsonRpcProvider(NERO_RPC_URL);
+      await rpc.waitForTransaction(txHash);
+
+      setPurchaseStatus({ state: "success", message: "Compra confirmada na blockchain!" });
+
+      // Atualiza quantidade disponível localmente
+      setListings((prev) => prev.map((l) => l.id === selectedListing.id ? { ...l, quantity: l.quantity - quantity } : l));
+    } catch (err) {
+      console.error("Erro na compra:", err);
+      setPurchaseStatus({ state: "error", message: err?.message || "Erro desconhecido" });
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-lg mb-5 pt-4 border border-gray-100 animate-fadeIn max-w-7xl mx-auto py-8 px-4 bg-slate-100 min-h-screen">
       <div className="flex justify-between items-center mb-6">
@@ -575,7 +628,6 @@ const Marketplace = ({ walletInfo }) => {
           )}
         </>
       )}
-
       {selectedChatListing && (
         <ChatModal
           isOpen={showChatModal}
@@ -610,7 +662,6 @@ const Marketplace = ({ walletInfo }) => {
         .animate-spin { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
-
     </div>
   );
 };
