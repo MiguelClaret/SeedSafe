@@ -10,13 +10,14 @@ import { Link } from "react-router-dom";
 import FiltersPanel from "./FiltersPanel";
 import CropCard from "./CropCard";
 import PurchaseModal from "./PurchaseModal";
-import ChatModal from "./ChatModal";
+import ChatModal from "./ChatModal"; // Adicionar import do ChatModal
 import { mockListings } from "./mockData";
 import MarketplaceOnboarding from "./MarketplaceOnboarding";
 import BlockchainSecurityInfo from "./BlockchainSecurityInfo";
 import MarketplaceHowItWorksButton from "./HowItWorksButton";
 import HarvestManagerABI from "../../abi/abiHarvest.json";
 import ChatbotWidget from "../ChatbotWidget";
+import ChatModal from "./ChatModal";
 
 // Novo endereço real do contrato na chain:
 const harvestManagerAddress = '0xE1F625A0787753F9A1bF82561c2F3C3666c4381c';
@@ -173,12 +174,12 @@ const parseDocumentation = (docString) => {
     };
 
   }
-  // Suporta tanto português (Localização/Área/Práticas) quanto inglês (Location/Area/Practices)
-  const locationMatch = docString.match(/Localiza..o: ([^,]+),|Location: ([^,]+),/i);
-  const areaMatch = docString.match(/(?:..rea|Area):\s*([0-9.]+)ha/i);
-  const practicesMatch = docString.match(/(?:Pr.ticas|Practices):\s*(.*)/i);
+  const loc = docString.match(/Localiza..o: (.*?), ..rea:/);
+  const area = docString.match(/..rea: ([0-9.]+)ha/);
+  const practices = docString.match(/Pr.ticas: (.*)/);
   return {
-    location: (locationMatch?.[1] || locationMatch?.[2] || "Unknown Location").trim(),
+
+    location: locationMatch ? locationMatch[1].trim() : "Unknown Location",
     area: areaMatch ? parseFloat(areaMatch[1]) : 0,
     practicesString: practicesMatch ? practicesMatch[1].trim() : "",
     sustainablePractices: practicesMatch
@@ -204,8 +205,8 @@ const Marketplace = ({ walletInfo }) => {
   const [error, setError] = useState(null);
   const [selectedListing, setSelectedListing] = useState(null);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
-  const [showChatModal, setShowChatModal] = useState(false);
-  const [selectedChatListing, setSelectedChatListing] = useState(null);
+  const [showChatModal, setShowChatModal] = useState(false); // Estado para o chat
+  const [selectedChatListing, setSelectedChatListing] = useState(null); // Listing selecionado para chat
   const [useMockData, setUseMockData] = useState(true);
   const [purchaseStatus, setPurchaseStatus] = useState({
     state: "idle",
@@ -218,14 +219,14 @@ const Marketplace = ({ walletInfo }) => {
     cropTypes: [],
   });
   const [showOnboarding, setShowOnboarding] = useState(false);
-  // Ordem de ordenação dos resultados. Valores possíveis: "price-low", "price-high", "carbon"
-  const [sortOrder, setSortOrder] = useState("price-low");
+
+
+  // Estados para chat
+  const [chatListing, setChatListing] = useState(null);
+  const [showChatModal, setShowChatModal] = useState(false);
 
   const provider = usePublicClient();
   const { data: walletClient } = useWalletClient();
-
-  // Helper para animação em cascata de cards
-  const getAnimationDelay = (i) => `${i * 70}ms`;
 
   // Fetch data from NERO blockchain or use mock data
   useEffect(() => {
@@ -351,19 +352,11 @@ const Marketplace = ({ walletInfo }) => {
     if (filters.cropTypes.length > 0)
       results = results.filter((l) => filters.cropTypes.includes(l.cropType));
 
-    if (sortOrder === "price-low") {
-      results.sort((a, b) => {
-        if (a.pricePerUnit.lt(b.pricePerUnit)) return -1;
-        if (a.pricePerUnit.gt(b.pricePerUnit)) return 1;
-        return 0;
-      });
-    } else if (sortOrder === "price-high") {
-      results.sort((a, b) => {
-        if (a.pricePerUnit.gt(b.pricePerUnit)) return -1;
-        if (a.pricePerUnit.lt(b.pricePerUnit)) return 1;
-        return 0;
-      });
-    } else if (sortOrder === "carbon")
+    if (sortOrder === "price-low")
+      results.sort((a, b) => a.pricePerUnit.sub(b.pricePerUnit).toNumber());
+    else if (sortOrder === "price-high")
+      results.sort((a, b) => b.pricePerUnit.sub(a.pricePerUnit).toNumber());
+    else if (sortOrder === "carbon")
       results.sort((a, b) => b.carbonCredits - a.carbonCredits);
 
     setFilteredListings(results);
@@ -371,7 +364,7 @@ const Marketplace = ({ walletInfo }) => {
 
   const toggleFilters = () => setShowFilters(!showFilters);
   const handleSearch = (e) => setSearchQuery(e.target.value);
-
+  const toggleFilters = () => setShowFilters(!showFilters);
   const handleInvestClick = (listing) => {
     setSelectedListing(listing);
     setPurchaseStatus({ state: "idle", message: "" });
@@ -458,6 +451,53 @@ const Marketplace = ({ walletInfo }) => {
       setPurchaseStatus({ state: "error", message: errorMessage });
     }
     return true;
+  });
+
+  /* ----------------------- Ações de Investir & Chat ----------------------- */
+  const handleInvestClick = (listing) => {
+    setSelectedListing(listing);
+    setPurchaseStatus({ state: "idle", message: "" });
+    setShowPurchaseModal(true);
+  };
+
+  const handleChatClick = (listing) => {
+    setChatListing(listing);
+    setShowChatModal(true);
+  };
+
+  /* ---------------------------- Confirmar Compra --------------------------- */
+  const handlePurchaseConfirm = async (quantity) => {
+    if (!walletClient || !selectedListing) {
+      setPurchaseStatus({ state: "error", message: "Carteira não conectada." });
+      return;
+    }
+
+    try {
+      setPurchaseStatus({ state: "pending", message: "Aguardando confirmação da transação na carteira..." });
+
+      const totalCostWei = selectedListing.pricePerUnit.mul(ethers.BigNumber.from(quantity));
+
+      // Envia NERO para o produtor (transação simples para fins de demonstração)
+      const txHash = await walletClient.sendTransaction({
+        to: selectedListing.producerAddress,
+        value: totalCostWei,
+        chainId: NERO_CHAIN_ID,
+      });
+
+      setPurchaseStatus({ state: "pending", message: `Transação enviada: ${txHash.slice(0, 10)}... Aguarde confirmação.` });
+
+      // Opcional: aguardar 1 confirmação pela RPC pública
+      const rpc = new ethers.providers.JsonRpcProvider(NERO_RPC_URL);
+      await rpc.waitForTransaction(txHash);
+
+      setPurchaseStatus({ state: "success", message: "Compra confirmada na blockchain!" });
+
+      // Atualiza quantidade disponível localmente
+      setListings((prev) => prev.map((l) => l.id === selectedListing.id ? { ...l, quantity: l.quantity - quantity } : l));
+    } catch (err) {
+      console.error("Erro na compra:", err);
+      setPurchaseStatus({ state: "error", message: err?.message || "Erro desconhecido" });
+    }
   };
 
   return (
@@ -508,8 +548,7 @@ const Marketplace = ({ walletInfo }) => {
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-gray-400" />
             </div>
-            {/* search input would be here */}
-          </div>
+          ))}
         </div>
         <div className="mb-4 text-gray-600 flex items-center">
           {isLoading ? (
