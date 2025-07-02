@@ -37,6 +37,9 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
   const displayName = navbarProfile?.displayName || null
   const avatarUrl = navbarProfile?.avatarUrl || null
 
+  // Se não houver nome, usa endereço encurtado
+  const fallbackDisplay = avatarUrl ? (navbarProfile?.displayName || "") : shortenAddress(userAddress);
+
   // === Carregar mensagens não lidas ao entrar ===
   useEffect(() => {
     if (!isLoggedIn || !userAddress) return
@@ -341,7 +344,7 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
                       <FaUserCircle className={`text-xl ${userRole === 'producer' ? 'text-green-600' : 'text-blue-600'}`} />
                     )}
                     <span className="text-sm font-medium text-gray-700">
-                      {displayName || shortenAddress(userAddress)}
+                      {fallbackDisplay}
                     </span>
                   </Link>
                   <button
@@ -451,7 +454,7 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
                     <FaUserCircle className={`text-xl ${userRole === 'producer' ? 'text-green-600' : 'text-blue-600'}`} />
                   )}
                   <span className="text-sm font-medium">
-                    {displayName || shortenAddress(userAddress)}
+                    {fallbackDisplay}
                   </span>
                 </Link>
                 <button

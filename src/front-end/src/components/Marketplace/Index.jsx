@@ -174,12 +174,12 @@ const parseDocumentation = (docString) => {
     };
 
   }
-  const loc = docString.match(/Localiza..o: (.*?), ..rea:/);
-  const area = docString.match(/..rea: ([0-9.]+)ha/);
-  const practices = docString.match(/Pr.ticas: (.*)/);
+  // Suporta tanto português (Localização/Área/Práticas) quanto inglês (Location/Area/Practices)
+  const locationMatch = docString.match(/Localiza..o: ([^,]+),|Location: ([^,]+),/i);
+  const areaMatch = docString.match(/(?:..rea|Area):\s*([0-9.]+)ha/i);
+  const practicesMatch = docString.match(/(?:Pr.ticas|Practices):\s*(.*)/i);
   return {
-
-    location: locationMatch ? locationMatch[1].trim() : "Unknown Location",
+    location: (locationMatch?.[1] || locationMatch?.[2] || "Unknown Location").trim(),
     area: areaMatch ? parseFloat(areaMatch[1]) : 0,
     practicesString: practicesMatch ? practicesMatch[1].trim() : "",
     sustainablePractices: practicesMatch
@@ -219,7 +219,8 @@ const Marketplace = ({ walletInfo }) => {
     cropTypes: [],
   });
   const [showOnboarding, setShowOnboarding] = useState(false);
-
+  // Ordem de ordenação dos resultados. Valores possíveis: "price-low", "price-high", "carbon"
+  const [sortOrder, setSortOrder] = useState("price-low");
 
   // Estados para chat
   const [chatListing, setChatListing] = useState(null);
@@ -227,6 +228,9 @@ const Marketplace = ({ walletInfo }) => {
 
   const provider = usePublicClient();
   const { data: walletClient } = useWalletClient();
+
+  // Helper para animação em cascata de cards
+  const getAnimationDelay = (i) => `${i * 70}ms`;
 
   // Fetch data from NERO blockchain or use mock data
   useEffect(() => {
@@ -352,11 +356,19 @@ const Marketplace = ({ walletInfo }) => {
     if (filters.cropTypes.length > 0)
       results = results.filter((l) => filters.cropTypes.includes(l.cropType));
 
-    if (sortOrder === "price-low")
-      results.sort((a, b) => a.pricePerUnit.sub(b.pricePerUnit).toNumber());
-    else if (sortOrder === "price-high")
-      results.sort((a, b) => b.pricePerUnit.sub(a.pricePerUnit).toNumber());
-    else if (sortOrder === "carbon")
+    if (sortOrder === "price-low") {
+      results.sort((a, b) => {
+        if (a.pricePerUnit.lt(b.pricePerUnit)) return -1;
+        if (a.pricePerUnit.gt(b.pricePerUnit)) return 1;
+        return 0;
+      });
+    } else if (sortOrder === "price-high") {
+      results.sort((a, b) => {
+        if (a.pricePerUnit.gt(b.pricePerUnit)) return -1;
+        if (a.pricePerUnit.lt(b.pricePerUnit)) return 1;
+        return 0;
+      });
+    } else if (sortOrder === "carbon")
       results.sort((a, b) => b.carbonCredits - a.carbonCredits);
 
     setFilteredListings(results);
@@ -364,7 +376,7 @@ const Marketplace = ({ walletInfo }) => {
 
   const toggleFilters = () => setShowFilters(!showFilters);
   const handleSearch = (e) => setSearchQuery(e.target.value);
-  const toggleFilters = () => setShowFilters(!showFilters);
+
   const handleInvestClick = (listing) => {
     setSelectedListing(listing);
     setPurchaseStatus({ state: "idle", message: "" });
@@ -451,7 +463,7 @@ const Marketplace = ({ walletInfo }) => {
       setPurchaseStatus({ state: "error", message: errorMessage });
     }
     return true;
-  });
+  };
 
   /* ----------------------- Ações de Investir & Chat ----------------------- */
   const handleInvestClick = (listing) => {
@@ -548,7 +560,8 @@ const Marketplace = ({ walletInfo }) => {
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-gray-400" />
             </div>
-          ))}
+            {/* search input would be here */}
+          </div>
         </div>
         <div className="mb-4 text-gray-600 flex items-center">
           {isLoading ? (

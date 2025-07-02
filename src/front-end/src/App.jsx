@@ -42,8 +42,8 @@ import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
 import { CHAIN_NAMESPACES, WEB3AUTH_NETWORK } from "@web3auth/base";
 import { Presets } from "userop";
 import { getAAWalletAddress, isAAWalletDeployed } from "./utils/aaUtils";
-import Profile from "./components/Profile";
-import UsersDirectory from "./components/UsersDirectory";
+import Profile from "./components/Profile.jsx";
+import UsersDirectory from "./components/UsersDirectory.jsx";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const web3AuthClientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID;

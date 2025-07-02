@@ -1,16 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Send } from "lucide-react";
+import { supabase } from "../../services/supabaseClient";
 import { getProfile } from "../../services/profileService";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "../../services/supabaseClient";
 
-const ChatModal = ({ isOpen, onClose, userId, farmerId }) => {
+const ChatModal = ({ isOpen, onClose, userId, farmerId, farmerName }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Perfis
+  // Perfis (para avatar e nome)
   const { data: myProfile } = useQuery({
     queryKey: ["chatModalProfile", userId],
     enabled: !!userId,
@@ -131,7 +131,7 @@ const ChatModal = ({ isOpen, onClose, userId, farmerId }) => {
             />
             <div>
               <h3 className="font-semibold text-gray-800">
-                {farmerProfile?.displayName || farmerId?.slice(0, 10) + "..."}
+                {farmerProfile?.displayName || farmerName || (farmerId ? `${farmerId.substring(0,6)}...${farmerId.slice(-4)}` : "User")}
               </h3>
               <p className="text-xs text-green-600 flex items-center">
                 <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
