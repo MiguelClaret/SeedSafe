@@ -16,7 +16,7 @@ const OverlayApp: React.FC<OverlayAppProps> = ({ mode = 'sidebar' }) => {
   if (mode === 'sidebar') {
     return (
       <div
-        className={`fixed transition-transform duration-300 ease-in-out transform ${
+        className={`fixed z-[9999] transition-transform duration-300 ease-in-out transform ${
           isWalletPanel ? 'translate-x-0' : '-translate-x-[350px]'
         }`} 
         style={{ left: 0, top: '80px' }}
@@ -38,7 +38,7 @@ const OverlayApp: React.FC<OverlayAppProps> = ({ mode = 'sidebar' }) => {
         <CustomConnectButton mode={mode} />
       </div>
       {isWalletPanel && (
-        <div className='fixed sm:top-[100px] top-[160px]' style={{ left: 0, width: '350px' }}>
+        <div className='fixed z-[9999] sm:top-[100px] top-[160px]' style={{ left: 0, width: '350px' }}>
           <div className='bg-white rounded-md shadow-lg'>
             <ScreenRenderer currentScreen={currentScreen as Screen} />
           </div>
