@@ -28,6 +28,7 @@ const ChatModal = ({ isOpen, onClose, userId, farmerId }) => {
   const myAddr = userId?.toLowerCase();
   const peerAddr = farmerId?.toLowerCase();
 
+  // Fetch history on open
   useEffect(() => {
     const fetchHistory = async () => {
       if (isOpen && myAddr && peerAddr) {
@@ -42,6 +43,7 @@ const ChatModal = ({ isOpen, onClose, userId, farmerId }) => {
     fetchHistory();
   }, [isOpen, myAddr, peerAddr]);
 
+  // Real-time updates via Supabase
   useEffect(() => {
     if (!myAddr || !peerAddr) return;
 
@@ -65,10 +67,12 @@ const ChatModal = ({ isOpen, onClose, userId, farmerId }) => {
     };
   }, [myAddr, peerAddr]);
 
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Focus input on open
   useEffect(() => {
     if (isOpen && inputRef.current) {
       setTimeout(() => inputRef.current.focus(), 100);
@@ -126,7 +130,9 @@ const ChatModal = ({ isOpen, onClose, userId, farmerId }) => {
               className="w-10 h-10 rounded-full object-cover border-2 border-amber-600"
             />
             <div>
-              <h3 className="font-semibold text-gray-800">{farmerProfile?.displayName || farmerId?.slice(0,10)+"..."}</h3>
+              <h3 className="font-semibold text-gray-800">
+                {farmerProfile?.displayName || farmerId?.slice(0, 10) + "..."}
+              </h3>
               <p className="text-xs text-green-600 flex items-center">
                 <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
                 Online now
