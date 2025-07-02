@@ -1,11 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import io from "socket.io-client";
-import axios from "axios";
-import { X, Send, User } from "lucide-react";
+import { X, Send } from "lucide-react";
 import { getProfile } from "../../services/profileService";
 import { useQuery } from "@tanstack/react-query";
-
-const socket = io("http://localhost:3001");
+import { supabase } from "../../services/supabaseClient";
 
 const ChatModal = ({ isOpen, onClose, userId, farmerId }) => {
   const [messages, setMessages] = useState([]);
@@ -32,22 +29,40 @@ const ChatModal = ({ isOpen, onClose, userId, farmerId }) => {
   const peerAddr = farmerId?.toLowerCase();
 
   useEffect(() => {
-    if (isOpen && myAddr && peerAddr) {
-      axios
-        .get(`http://localhost:3001/messages?from=${myAddr}&to=${peerAddr}`)
-        .then((res) => setMessages(res.data))
-        .catch(console.error);
-    }
+    const fetchHistory = async () => {
+      if (isOpen && myAddr && peerAddr) {
+        const { data, error } = await supabase
+          .from("message")
+          .select("*")
+          .or(`and(from.eq.${myAddr},to.eq.${peerAddr}),and(from.eq.${peerAddr},to.eq.${myAddr})`)
+          .order("created_at", { ascending: true });
+        if (!error) setMessages(data);
+      }
+    };
+    fetchHistory();
   }, [isOpen, myAddr, peerAddr]);
 
   useEffect(() => {
-    socket.on("newMessage", (msg) => {
-      const isRelevant =
-        (msg.from === myAddr && msg.to === peerAddr) ||
-        (msg.from === peerAddr && msg.to === myAddr);
-      if (isRelevant) setMessages((prev) => [...prev, msg]);
-    });
-    return () => socket.off("newMessage");
+    if (!myAddr || !peerAddr) return;
+
+    const channel = supabase
+      .channel(`chat_${myAddr}_${peerAddr}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "message" },
+        (payload) => {
+          const msg = payload.new;
+          const isRelevant =
+            (msg.from === myAddr && msg.to === peerAddr) ||
+            (msg.from === peerAddr && msg.to === myAddr);
+          if (isRelevant) setMessages((prev) => [...prev, msg]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [myAddr, peerAddr]);
 
   useEffect(() => {
@@ -68,7 +83,13 @@ const ChatModal = ({ isOpen, onClose, userId, farmerId }) => {
       content: newMessage.trim(),
     };
     try {
-      await axios.post("http://localhost:3001/send-message", payload);
+      const { data, error } = await supabase
+        .from("message")
+        .insert([payload])
+        .select()
+        .single();
+      if (error) throw error;
+      if (data) setMessages((prev) => [...prev, data]);
       setNewMessage("");
     } catch (err) {
       console.error("Erro ao enviar mensagem:", err);

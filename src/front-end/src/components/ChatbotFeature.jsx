@@ -1,12 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI } from '@google/genai';
 
-// Initialize Gemini client
-const ai = new GoogleGenAI({ apiKey: process.env.REACT_APP_GEMINI_API_KEY });
-const GEMINI_CONTEXT = `
-A complete, transparent and scalable Web3 solution for tokenization of future harvests, carbon credit issuance, and decentralized financing for small producers built on the NERO Chain with Account Abstraction and Paymaster support that offers a 100% gasless experience for the end user oriented towards social, economic, and environmental impact. The platform allows producers to create their Smart Account without technical knowledge or gas payment to register future harvests defining type, quantity, delivery date, and price, notifying the auditor who validates sustainable practices and simultaneously authorizes the issuance of an ERC-1155 token for the harvest and an ERC-20 token for carbon credits. Next, the producer lists the harvest on the marketplace and receives funds for each sale, while the auditor logs in with AUDITOR_ROLE to analyze practices, call authorizeHarvest, and release token minting. The investor accesses gasless via Smart Account, buys harvest tokens in the marketplace, receives a ComboNFT with harvest and carbon metadata, and monitors the status of total, partial, or total failure delivery with automatic reimbursement via guarantee fund or debt NFT issuance. The management team defines the global fee in the CustomPaymaster to keep the Paymaster funded, manages onboarding with educational chatbot and Web2-like UX, and ensures fee transparency. The system includes smart contracts such as FutureHarvestToken.sol (ERC-1155), TCO2Token.sol (ERC-20), CarbonVerifier.sol, Marketplace.sol, GuaranteeFund.sol, ComboNFT.sol (ERC-721), Reputation.sol, and CustomPaymaster.sol, plus Smart Accounts, custom Paymaster, front-end in React with Tailwind and Vite, integration via Ethers.js, and metadata storage in IPFS and nft.storage. This integrated flow on the NERO Chain ensures complete traceability and ESG impact, covering scenarios of total, partial, total loss delivery, or rewards for sustainable practices, making the solution modular, scalable, and socially conscious with gasless experience for mass adoption.
-`;
-
+// Endpoint da função serverless (Vercel). Por padrão, relativo ao domínio.
+const CHAT_ENDPOINT = import.meta.env.VITE_CHAT_API || '/api/chat';
+// Contexto usado apenas pelo back-end agora; mantido aqui caso precise enviar junto.
+const GEMINI_CONTEXT = `SeedSafe platform context`; // reduzido somente para referência
 
 const ChatMessage = ({ content, sender, isTyping }) => {
   if (isTyping) {
@@ -60,18 +57,19 @@ const ChatWindow = () => {
       const lower = text.toLowerCase();
       let reply = null;
 
-
-      // if no keyword, call Gemini
+      // Se nenhuma palavra-chave capturada, consulta a API serverless
       if (!reply) {
         try {
-          const res = await ai.models.generateContent({
-            model: 'gemini-2.0-flash',
-            contents: `${GEMINI_CONTEXT}, don't use any markdown elements, just plain text, Answer only about the SeedSafe platform that I presented here: ${text}`
+          const apiRes = await fetch(CHAT_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: `${GEMINI_CONTEXT}. Pergunta: ${text}` })
           });
-          reply = res.text;
+          const data = await apiRes.json();
+          reply = data.answer || 'Desculpe, ocorreu um erro.';
         } catch (err) {
-          console.error('Gemini error', err);
-          reply = 'Sorry, an error occurred. Please try again in a moment.';
+          console.error('Chat API error', err);
+          reply = 'Desculpe, ocorreu um erro. Tente novamente em instantes.';
         }
       }
 

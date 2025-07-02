@@ -14,7 +14,6 @@ import { useAccount, useDisconnect } from "wagmi";
 import { useEthersSigner } from "./hooks/account/useGetSigner";
 import { Web3AuthProvider, useWeb3Auth } from "./components/Web3AuthContext";
 import { WalletInfoProvider } from "./contexts/WalletInfoContext";
-import OverlayProviders from "./components/neroOverlay/OverlayProviders";
 import OverlayApp from "./components/neroOverlay/OverlayApp";
 import { ethers } from "ethers";
 
@@ -57,10 +56,14 @@ if (envChainId) {
     chainId = parsed;
   }
 }
-const entryPointAddress = process.env.NEXT_PUBLIC_ENTRY_POINT_ADDRESS;
-const simpleAccountFactoryAddress =
-  process.env.NEXT_PUBLIC_SIMPLE_ACCOUNT_FACTORY_ADDRESS;
-const bundlerUrl = process.env.NEXT_PUBLIC_BUNDLER_URL;
+
+const sanitize = (str) => (str ? str.split(" ")[0].trim() : undefined);
+
+const entryPointAddress = sanitize(process.env.NEXT_PUBLIC_ENTRY_POINT_ADDRESS);
+const simpleAccountFactoryAddress = sanitize(
+  process.env.NEXT_PUBLIC_SIMPLE_ACCOUNT_FACTORY_ADDRESS
+);
+const bundlerUrl = sanitize(process.env.NEXT_PUBLIC_BUNDLER_URL);
 
 const addGlobalStyles = () => {
   const style = document.createElement("style");
@@ -179,9 +182,16 @@ function AppContent() {
         const privateKeyProvider = new EthereumPrivateKeyProvider({
           config: { chainConfig },
         });
+        // Permite definir a rede do Web3Auth via .env.
+        const envNetworkKey = process.env.NEXT_PUBLIC_WEB3AUTH_NETWORK;
+        // Usa o valor da enum se existir, senão cai no mainnet.
+        const resolvedNetwork =
+          (envNetworkKey && WEB3AUTH_NETWORK[envNetworkKey]) ||
+          WEB3AUTH_NETWORK.SAPPHIRE_DEVNET;
+
         const web3auth = new Web3Auth({
           clientId: web3AuthClientId,
-          web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
+          web3AuthNetwork: resolvedNetwork,
           chainConfig: chainConfig,
           privateKeyProvider: privateKeyProvider,
           uiConfig: { appName: "SeedSafe" },
@@ -377,19 +387,7 @@ function AppContent() {
 
   return (
     <WalletInfoProvider value={walletContextValueForProvider}>
-      <div 
-        style={{ 
-          position: "fixed", 
-          top: 24, 
-          left: isMobile ? "auto" : 24,
-          right: isMobile ? 24 : "auto",
-          zIndex: 9999 
-        }}
-      >
-        <OverlayProviders>
-          <OverlayApp mode="sidebar" isMobile={isMobile} />
-        </OverlayProviders>
-      </div>
+      <OverlayApp mode="sidebar" isMobile={isMobile} />
       <Router>
         <div className="font-poppins text-slate-800 overflow-x-hidden w-full min-h-screen">
           <header

@@ -1,13 +1,12 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Link, useLocation } from "react-router-dom"
 import logoSvg from "../assets/logo_svg.svg"
 import { ConnectButton } from '@rainbow-me/rainbowkit'; // Import RainbowKit ConnectButton
 import { FaUserCircle } from "react-icons/fa";
 import { useQuery } from "@tanstack/react-query"
 import { getProfile } from "../services/profileService"
-import io from "socket.io-client"
 import { supabase } from "../services/supabaseClient"
 import ChatModal from "./Marketplace/ChatModal"
 
@@ -25,9 +24,7 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
   // 🔔 Notificações
   const [unseenMessages, setUnseenMessages] = useState([])
   const [showNotifications, setShowNotifications] = useState(false)
-  const socketRef = useRef(null)
   const [chatPeer, setChatPeer] = useState(null)
-  const CHAT_API = import.meta.env.VITE_CHAT_API_URL || "http://localhost:3001"
 
   // --- fetch profile for navbar display ---
   const { data: navbarProfile } = useQuery({
@@ -64,20 +61,24 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
     loadUnseen()
   }, [isLoggedIn, userAddress])
 
-  // === WebSocket para novas mensagens ===
+  // === Supabase Realtime para novas mensagens ===
   useEffect(() => {
     if (!isLoggedIn || !userAddress) return
 
-    socketRef.current = io(CHAT_API, { transports: ["websocket"] })
-
-    socketRef.current.on("newMessage", (msg) => {
-      if (msg.to === userAddress.toLowerCase()) {
-        setUnseenMessages((prev) => [msg, ...prev])
-      }
-    })
+    const lower = userAddress.toLowerCase()
+    const channel = supabase
+      .channel(`notifications_${lower}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "message", filter: `to=eq.${lower}` },
+        (payload) => {
+          setUnseenMessages((prev) => [payload.new, ...prev])
+        }
+      )
+      .subscribe()
 
     return () => {
-      socketRef.current?.disconnect()
+      supabase.removeChannel(channel)
     }
   }, [isLoggedIn, userAddress])
 
