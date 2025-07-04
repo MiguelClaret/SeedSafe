@@ -6,15 +6,16 @@ import { usePublicClient, useWalletClient } from "wagmi";
 import {
   Search,
   Leaf,
-  Info,
   RefreshCw as RefreshIcon,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import PurchaseModal from "./PurchaseModal";
 import CropCard from "./CropCard";
 import HarvestManagerABI from "../../abi/abiHarvest.json";
+import HarvestMarketABI from "../../abi/abiMarket.json";
 
 const harvestManagerAddress = "0xE1F625A0787753F9A1bF82561c2F3C3666c4381c";
+const harvestMarketAddress = "0x385eD0FD6F6e514d96F9e2EFf5B9843592e3bfeF";
 const NERO_RPC_URL = "https://rpc-testnet.nerochain.io";
 const NERO_CHAIN_ID = 689;
 const NERO_USD_RATE = 0.000134;
@@ -62,6 +63,7 @@ const Marketplace = ({ walletInfo }) => {
   const [selectedListing, setSelectedListing] = useState(null);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [purchaseStatus, setPurchaseStatus] = useState({ state: "idle", message: "" });
+  const [isApproved, setIsApproved] = useState(false);
 
   const provider = usePublicClient();
   const { data: walletClient } = useWalletClient();
@@ -74,17 +76,20 @@ const Marketplace = ({ walletInfo }) => {
       try {
         const rpc = new ethers.providers.JsonRpcProvider(NERO_RPC_URL);
         const contract = new ethers.Contract(harvestManagerAddress, HarvestManagerABI, rpc);
-        const pendingIds = await contract.getPendingHarvestIds();
+        const allHarvests = await contract.getAllHarvests();
+
+        const validated = allHarvests
+          .map((h, index) => ({ ...h, id: index }))
+          .filter((h) => Number(h.status) === 1); // 1 = VALIDATED
 
         const data = await Promise.all(
-          pendingIds.map(async (id) => {
-            const h = await contract.harvests(id);
+          validated.map(async (h) => {
             const doc = parseDocumentation(h.documentation);
             const credits = calculateCarbonCredits(doc.sustainablePractices, doc.area);
             const priceNero = formatPrice(h.pricePerUnit);
 
             return {
-              id: id.toNumber(),
+              id: h.id,
               cropType: h.crop,
               quantity: parseInt(h.quantity),
               pricePerUnit: h.pricePerUnit,
@@ -120,6 +125,32 @@ const Marketplace = ({ walletInfo }) => {
     setFilteredListings(filtered);
   }, [searchQuery, listings]);
 
+  useEffect(() => {
+    const checkApproval = async () => {
+      if (!window.ethereum || walletInfo?.role !== "producer") return;
+
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const account = await signer.getAddress();
+
+      const harvestContract = new ethers.Contract(harvestManagerAddress, HarvestManagerABI, provider);
+      const approved = await harvestContract.isApprovedForAll(account, harvestMarketAddress);
+      setIsApproved(approved);
+    };
+
+    checkApproval();
+  }, [walletInfo]);
+
+  const handleApproval = async () => {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+
+    const harvestContract = new ethers.Contract(harvestManagerAddress, HarvestManagerABI, signer);
+    const tx = await harvestContract.setApprovalForAll(harvestMarketAddress, true);
+    await tx.wait();
+    setIsApproved(true);
+  };
+
   const handleSearch = (e) => setSearchQuery(e.target.value);
   const handleInvestClick = (listing) => {
     setSelectedListing(listing);
@@ -128,73 +159,56 @@ const Marketplace = ({ walletInfo }) => {
   };
 
   const handlePurchaseConfirm = async (purchaseAmount) => {
-  if (!window.ethereum || !selectedListing) {
-    setPurchaseStatus({
-      state: "error",
-      message: "Wallet not connected or no listing selected.",
-    });
-    return;
-  }
-
-  try {
-    // ✅ Conectando via Web3Provider
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
-
-    // ✅ Validando chain
-    const network = await provider.getNetwork();
-    if (network.chainId !== NERO_CHAIN_ID) {
-      setPurchaseStatus({
-        state: "error",
-        message: `Switch to NERO Chain (Chain ID: ${NERO_CHAIN_ID})`,
-      });
+    if (!window.ethereum || !selectedListing) {
+      setPurchaseStatus({ state: "error", message: "Wallet not connected or no listing selected." });
       return;
     }
 
-    // ✅ Criando contrato com signer real
-    const contract = new ethers.Contract(harvestManagerAddress, HarvestManagerABI, signer);
+    try {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const network = await provider.getNetwork();
 
-    const amount = ethers.BigNumber.from(purchaseAmount);
-    const total = selectedListing.pricePerUnit.mul(amount);
+      if (network.chainId !== NERO_CHAIN_ID) {
+        setPurchaseStatus({ state: "error", message: `Switch to NERO Chain (Chain ID: ${NERO_CHAIN_ID})` });
+        return;
+      }
 
-    setPurchaseStatus({
-      state: "pending",
-      message: "Awaiting wallet confirmation...",
-    });
+      const amount = ethers.BigNumber.from(purchaseAmount);
+      const total = selectedListing.pricePerUnit.mul(amount);
 
-    const tx = await contract.buyToken(selectedListing.id, amount, {
-      value: total,
-    });
+      setPurchaseStatus({ state: "pending", message: "Awaiting wallet confirmation..." });
 
-    setPurchaseStatus({
-      state: "pending",
-      message: `Transaction sent: ${tx.hash}. Waiting for confirmation...`,
-    });
+      const marketContract = new ethers.Contract(
+        harvestMarketAddress,
+        HarvestMarketABI,
+        signer
+      );
 
-    await tx.wait();
+      const tx = await marketContract.buy(selectedListing.id, amount, { value: total });
 
-    setPurchaseStatus({
-      state: "success",
-      message: `Purchase successful! Tx: ${tx.hash}`,
-    });
+      setPurchaseStatus({
+        state: "pending",
+        message: `Transaction sent: ${tx.hash}. Waiting for confirmation...`,
+      });
 
-    setTimeout(() => {
-      setShowPurchaseModal(false);
-      setPurchaseStatus({ state: "idle", message: "" });
-    }, 3000);
-  } catch (err) {
-    console.error("Transaction failed:", err);
-    let message = "Transaction failed.";
-    if (err?.code === 4001) {
-      message = "Transaction rejected in wallet.";
-    } else if (err?.reason) {
-      message = err.reason;
-    } else if (err?.message) {
-      message = err.message;
+      await tx.wait();
+
+      setPurchaseStatus({ state: "success", message: `Purchase successful! Tx: ${tx.hash}` });
+
+      setTimeout(() => {
+        setShowPurchaseModal(false);
+        setPurchaseStatus({ state: "idle", message: "" });
+      }, 3000);
+    } catch (err) {
+      console.error("Transaction failed:", err);
+      let message = "Transaction failed.";
+      if (err?.code === 4001) message = "Transaction rejected in wallet.";
+      else if (err?.reason) message = err.reason;
+      else if (err?.message) message = err.message;
+      setPurchaseStatus({ state: "error", message });
     }
-    setPurchaseStatus({ state: "error", message });
-  }
-};
+  };
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -209,6 +223,16 @@ const Marketplace = ({ walletInfo }) => {
           </Link>
         )}
       </div>
+
+      {walletInfo?.role === "producer" && !isApproved && (
+        <button onClick={handleApproval} className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 mb-4">
+          🔓 Aprovar contrato de vendas
+        </button>
+      )}
+
+      {walletInfo?.role === "producer" && isApproved && (
+        <div className="text-green-700 mb-4">✅ Contrato de vendas aprovado</div>
+      )}
 
       <div className="mb-4">
         <div className="relative">

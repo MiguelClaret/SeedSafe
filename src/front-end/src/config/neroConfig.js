@@ -1,7 +1,5 @@
-import abiAgri from '../abi/abiAgri.json';
+import abiMarket from '../abi/abiMarket.json';
 import abiHarvest from '../abi/abiHarvest.json';
-import abiNft from '../abi/abiNft.json';
-import abiTco2 from '../abi/abiTco2.json';
 
 export const NERO_CHAIN_CONFIG = {
     chainId: 689,
@@ -25,17 +23,9 @@ export const CONTRACT_ADDRESSES = {
     address: '0xE1F625A0787753F9A1bF82561c2F3C3666c4381c',
     abi: abiHarvest
   },
-  tco2Token: {
-    address: '0x358AA13c52544ECCEF6B0ADD0f801012ADAD5eE3',
-    abi: abiTco2
-  },
-  nftCombo: {
-    address: '0xddaAd340b0f1Ef65169Ae5E41A8b10776a75482d',
-    abi: abiNft
-  },
-  agriFinance: {
-    address: '0x9D7f74d0C41E726EC95884E0e97Fa6129e3b5E99',
-    abi: abiAgri
+  harvestMarket: {
+    addres: '0x385eD0FD6F6e514d96F9e2EFf5B9843592e3bfeF',
+    abi:abiMarket
   },
   paymasterRpc: "https://paymaster-testnet.nerochain.io",
   bundlerRpc: "https://bundler-testnet.nerochain.io"
