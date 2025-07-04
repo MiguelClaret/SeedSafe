@@ -26,7 +26,7 @@ const fullPath = path.join(contractsDir, harvestFolder, "HarvestManager.json")
 const artifact = JSON.parse(fs.readFileSync(fullPath, "utf8"))
 
 // ⚠️ Endereço do contrato já deployado
-const contractAddress = "0xE1F625A0787753F9A1bF82561c2F3C3666c4381c"
+const contractAddress = "0x9e19e961809bE09EB576fbB99c8a17f121d0C028"
 const contract = new ethers.Contract(contractAddress, artifact.abi, wallet)
 
 const harvests = [

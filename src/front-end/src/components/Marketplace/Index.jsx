@@ -14,7 +14,7 @@ import CropCard from "./CropCard";
 import HarvestManagerABI from "../../abi/abiHarvest.json";
 import HarvestMarketABI from "../../abi/abiMarket.json";
 
-const harvestManagerAddress = "0xE1F625A0787753F9A1bF82561c2F3C3666c4381c";
+const harvestManagerAddress = "0x9e19e961809bE09EB576fbB99c8a17f121d0C028";
 const harvestMarketAddress = "0x385eD0FD6F6e514d96F9e2EFf5B9843592e3bfeF";
 const NERO_RPC_URL = "https://rpc-testnet.nerochain.io";
 const NERO_CHAIN_ID = 689;
@@ -63,7 +63,6 @@ const Marketplace = ({ walletInfo }) => {
   const [selectedListing, setSelectedListing] = useState(null);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [purchaseStatus, setPurchaseStatus] = useState({ state: "idle", message: "" });
-  const [isApproved, setIsApproved] = useState(false);
 
   const provider = usePublicClient();
   const { data: walletClient } = useWalletClient();
@@ -125,31 +124,32 @@ const Marketplace = ({ walletInfo }) => {
     setFilteredListings(filtered);
   }, [searchQuery, listings]);
 
+  // 🔓 Auto approve for producer
   useEffect(() => {
-    const checkApproval = async () => {
-      if (!window.ethereum || walletInfo?.role !== "producer") return;
+    const autoApprove = async () => {
+      if (!walletInfo?.role || walletInfo.role !== "producer") return;
+      if (!window.ethereum) return;
 
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      const account = await signer.getAddress();
+      try {
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer = provider.getSigner();
+        const account = await signer.getAddress();
 
-      const harvestContract = new ethers.Contract(harvestManagerAddress, HarvestManagerABI, provider);
-      const approved = await harvestContract.isApprovedForAll(account, harvestMarketAddress);
-      setIsApproved(approved);
+        const contract = new ethers.Contract(harvestManagerAddress, HarvestManagerABI, signer);
+        const approved = await contract.isApprovedForAll(account, harvestMarketAddress);
+
+        if (!approved) {
+          const tx = await contract.setApprovalForAll(harvestMarketAddress, true);
+          await tx.wait();
+          console.log("✅ Contrato aprovado automaticamente");
+        }
+      } catch (err) {
+        console.error("Erro ao aprovar contrato automaticamente:", err);
+      }
     };
 
-    checkApproval();
+    autoApprove();
   }, [walletInfo]);
-
-  const handleApproval = async () => {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
-
-    const harvestContract = new ethers.Contract(harvestManagerAddress, HarvestManagerABI, signer);
-    const tx = await harvestContract.setApprovalForAll(harvestMarketAddress, true);
-    await tx.wait();
-    setIsApproved(true);
-  };
 
   const handleSearch = (e) => setSearchQuery(e.target.value);
   const handleInvestClick = (listing) => {
@@ -223,16 +223,6 @@ const Marketplace = ({ walletInfo }) => {
           </Link>
         )}
       </div>
-
-      {walletInfo?.role === "producer" && !isApproved && (
-        <button onClick={handleApproval} className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 mb-4">
-          🔓 Aprovar contrato de vendas
-        </button>
-      )}
-
-      {walletInfo?.role === "producer" && isApproved && (
-        <div className="text-green-700 mb-4">✅ Contrato de vendas aprovado</div>
-      )}
 
       <div className="mb-4">
         <div className="relative">

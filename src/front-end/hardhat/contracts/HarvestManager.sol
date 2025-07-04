@@ -33,12 +33,18 @@ contract HarvestManager is ERC1155, AccessControl {
     bytes32 public constant PRODUCER_ROLE = keccak256("PRODUCER_ROLE");
     bytes32 public constant AUDITOR_ROLE = keccak256("AUDITOR_ROLE");
 
+    address public harvestMarketAddress;
+
     event HarvestCreated(uint256 indexed harvestId, address indexed producer);
     event HarvestRejected(uint256 indexed harvestId, address indexed auditor);
 
     constructor() ERC1155("https://gateway.pinata.cloud/ipfs/{id}.json") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(PRODUCER_ROLE, msg.sender);
+    }
+
+    function setHarvestMarket(address _market) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        harvestMarketAddress = _market;
     }
 
     function createHarvest(
@@ -79,6 +85,11 @@ contract HarvestManager is ERC1155, AccessControl {
 
         _mint(to, harvestId, h.quantity, "");
         h.status = HarvestStatus.VALIDATED;
+
+        // 🔓 Aprova automaticamente o contrato HarvestMarket para transferir tokens do produtor
+        if (harvestMarketAddress != address(0)) {
+            _setApprovalForAll(to, harvestMarketAddress, true);
+        }
     }
 
     function rejectHarvest(uint256 harvestId)

@@ -498,6 +498,19 @@
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "harvestMarketAddress",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -753,6 +766,19 @@
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "_market",
+          "type": "address"
+        }
+      ],
+      "name": "setHarvestMarket",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "bytes4",
           "name": "interfaceId",
           "type": "bytes4"
@@ -787,19 +813,5 @@
       ],
       "stateMutability": "view",
       "type": "function"
-    },
-
-	{
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "harvestId",
-        "type": "uint256"
-      }
-    ],
-    "name": "approveHarvest",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
-]
+    }
+  ]
