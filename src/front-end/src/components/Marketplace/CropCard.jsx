@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Leaf, MapPin, Calendar, User, Award, Droplet, Crop,
-  RefreshCw, Thermometer, ChevronUp, ChevronDown
+  RefreshCw, Thermometer, ChevronUp, ChevronDown, MessageCircle
 } from "lucide-react";
+import { getProfile } from "../../services/profileService";
 
-const CropCard = ({ listing = {}, onInvestClick }) => {
+const CropCard = ({ listing = {}, onInvestClick, onChatClick }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [sellerProfile, setSellerProfile] = useState(null);
 
   const {
     cropType = "Unknown",
@@ -18,8 +20,23 @@ const CropCard = ({ listing = {}, onInvestClick }) => {
     location = "Unknown",
     harvestDate = "N/A",
     farmerName = "Anonymous",
+    producerAddress,
     sustainablePractices = [],
   } = listing;
+
+  // Load seller profile
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!producerAddress) return;
+      try {
+        const profile = await getProfile(producerAddress);
+        setSellerProfile(profile);
+      } catch (err) {
+        console.error("[CropCard] getProfile error", err);
+      }
+    };
+    loadProfile();
+  }, [producerAddress]);
 
   const getCropIcon = (cropType) => {
     switch (cropType.toLowerCase()) {
@@ -63,9 +80,12 @@ const CropCard = ({ listing = {}, onInvestClick }) => {
         <div className="text-sm font-medium text-amber-700">{displayPriceNERO} NERO/kg</div>
       </div>
 
-      <div className="flex items-center text-sm text-gray-600 mb-1">
-        <User className="h-4 w-4 mr-1" />
-        {farmerName}
+      <div className="flex items-center text-sm text-gray-600 mb-1 gap-2">
+        {sellerProfile?.avatarUrl && (
+          <img src={sellerProfile.avatarUrl} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
+        )}
+        <User className="h-4 w-4" />
+        {sellerProfile?.displayName || farmerName || (producerAddress ? `${producerAddress.substring(0,6)}...${producerAddress.slice(-4)}` : "Unknown")}
       </div>
 
       <div className="flex items-center text-sm text-gray-600 mb-1">
@@ -93,12 +113,23 @@ const CropCard = ({ listing = {}, onInvestClick }) => {
         <div className="mb-3">{renderPractices(sustainablePractices)}</div>
       )}
 
-      <button
-        onClick={() => onInvestClick && onInvestClick(listing)}
-        className="mt-auto bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded-md text-sm font-medium"
-      >
-        Invest Now
-      </button>
+      <div className="mt-auto flex gap-2">
+        <button
+          onClick={() => onInvestClick && onInvestClick(listing)}
+          className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-2 px-4 rounded-md text-sm font-medium"
+        >
+          Invest Now
+        </button>
+        {onChatClick && (
+          <button
+            onClick={() => onChatClick(listing)}
+            className="p-2 border border-green-600 text-green-700 rounded-md hover:bg-green-50"
+            title="Chat with seller"
+          >
+            <MessageCircle className="h-5 w-5" />
+          </button>
+        )}
+      </div>
     </div>
   );
 };

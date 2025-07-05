@@ -14,6 +14,7 @@ import {
 import { Link } from "react-router-dom";
 import PurchaseModal from "./PurchaseModal";
 import CropCard from "./CropCard";
+import ChatModal from "./ChatModal";
 import HarvestManagerABI from "../../abi/abiHarvest.json";
 import HarvestMarketABI from "../../abi/abiMarket.json";
 
@@ -31,6 +32,8 @@ const Marketplace = ({ walletInfo }) => {
   const [selectedListing, setSelectedListing] = useState(null);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [purchaseStatus, setPurchaseStatus] = useState({ state: "idle", message: "" });
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [chatListing, setChatListing] = useState(null);
   const [authLoading, setAuthLoading] = useState(false);
 
   const provider = usePublicClient();
@@ -195,6 +198,10 @@ const Marketplace = ({ walletInfo }) => {
                 setShowPurchaseModal(true);
                 setPurchaseStatus({ state: "idle", message: "" });
               }}
+              onChatClick={() => {
+                setChatListing(listing);
+                setShowChatModal(true);
+              }}
             />
           ))}
         </div>
@@ -211,6 +218,16 @@ const Marketplace = ({ walletInfo }) => {
           walletInfo={walletInfo}
           purchaseStatus={purchaseStatus}
           chainName="NERO Chain"
+        />
+      )}
+
+      {showChatModal && chatListing && (
+        <ChatModal
+          isOpen={showChatModal}
+          onClose={() => setShowChatModal(false)}
+          userId={walletInfo?.address}
+          farmerId={chatListing.producerAddress}
+          farmerName={chatListing.farmerName}
         />
       )}
     </div>

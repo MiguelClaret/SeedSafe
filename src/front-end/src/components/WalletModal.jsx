@@ -24,8 +24,12 @@ import { BsWallet2 } from "react-icons/bs";
 
 
 // --- Configuration from .env --- 
-const web3AuthClientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID;
-const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
+// Preferência por valor recebido via props; se ausente, usa variável de ambiente
+const envWeb3AuthClientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID;
+// Fallback RPC URL se não existir variável de ambiente
+const envRpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
+const DEFAULT_RPC_URL = "https://rpc-testnet.nerochain.io";
+const rpcUrl = envRpcUrl || DEFAULT_RPC_URL;
 // Parse chainId safely
 let chainId = 689; // Default value
 const envChainId = process.env.NEXT_PUBLIC_CHAIN_ID;
@@ -43,19 +47,33 @@ if (envChainId) {
 const sanitize = (str) => (str ? str.split(" ")[0].trim() : undefined);
 
 const paymasterUrl = process.env.NEXT_PUBLIC_PAYMASTER_URL;
-const entryPointAddress = sanitize(process.env.NEXT_PUBLIC_ENTRY_POINT_ADDRESS);
-const simpleAccountFactoryAddress = sanitize(process.env.NEXT_PUBLIC_SIMPLE_ACCOUNT_FACTORY_ADDRESS);
+const DEFAULT_ENTRY_POINT_ADDRESS = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+const DEFAULT_SA_FACTORY_ADDRESS = "0x9406Cc6185a346906296840746125a0E44976454";
+
+const entryPointAddress = sanitize(process.env.NEXT_PUBLIC_ENTRY_POINT_ADDRESS) || DEFAULT_ENTRY_POINT_ADDRESS;
+const simpleAccountFactoryAddress = sanitize(process.env.NEXT_PUBLIC_SIMPLE_ACCOUNT_FACTORY_ADDRESS) || DEFAULT_SA_FACTORY_ADDRESS;
 const bundlerUrl = sanitize(process.env.NEXT_PUBLIC_BUNDLER_URL);
 const paymasterApiKey = process.env.NEXT_PUBLIC_PAYMASTER_API_KEY;
 const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 // -------------------------------
 
-const WalletModal = ({ isOpen, onClose, onLogin }) => {
+// Fallback hardcoded para o Client ID do Web3Auth, caso não venha nem por prop nem por variável de ambiente
+const DEFAULT_WEB3AUTH_CLIENT_ID = "BBbZKu05ynPQd0UzSiJgWVTte9R3GqJyZOsLwxGj8aYEzt6nYZYezDqOJc_XA0YFCeg02cArWpUgR24KuvUBx0k";
+
+const WalletModal = ({
+  isOpen,
+  onClose,
+  onLogin,
+  web3AuthClientId: propWeb3AuthClientId,
+}) => {
   const [error, setError] = useState(null);
   const [connecting, setConnecting] = useState(null); // Store the type of connection being attempted
   const [web3authInstance, setWeb3authInstance] = useState(null);
   const { openConnectModal } = useConnectModal(); // Hook from RainbowKit
   const { login: loginWeb3AuthContext } = useWeb3Auth();
+
+  // Determina o Client ID efetivo (prop > .env)
+  const web3AuthClientId = propWeb3AuthClientId || envWeb3AuthClientId || DEFAULT_WEB3AUTH_CLIENT_ID;
 
   // Initialize Web3Auth
   useEffect(() => {
@@ -67,9 +85,7 @@ const WalletModal = ({ isOpen, onClose, onLogin }) => {
           return;
         }
         if (!rpcUrl) {
-           console.error("Nerochain RPC URL not configured.");
-           setError("Login service configuration missing (RPC URL).");
-           return;
+           console.error("Nerochain RPC URL not configured. Using fallback.");
         }
 
         // Ensure chainId is a valid number before hexlifying
@@ -121,7 +137,7 @@ const WalletModal = ({ isOpen, onClose, onLogin }) => {
       }
     };
     initWeb3Auth();
-  }, []);
+  }, [web3AuthClientId]);
 
   // Close modal on Escape key
   useEffect(() => {
@@ -138,7 +154,8 @@ const WalletModal = ({ isOpen, onClose, onLogin }) => {
   const connectEOA = () => {
     if (openConnectModal) {
       openConnectModal();
-      // onClose(); // Optionally close this modal when RainbowKit opens
+      // Fechar nosso modal imediatamente; RainbowKit cuidará do restante
+      onClose();
     } else {
       setError("Wallet connection manager not available.");
     }
@@ -349,7 +366,6 @@ const WalletModal = ({ isOpen, onClose, onLogin }) => {
             )}
           </button>
         </div>
-
 
         {error && (
           <div className="text-red-600 text-sm mt-4 p-3 bg-red-50 rounded-md border border-red-200">

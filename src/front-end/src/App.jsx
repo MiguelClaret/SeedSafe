@@ -46,8 +46,10 @@ import Profile from "./components/Profile.jsx";
 import UsersDirectory from "./components/UsersDirectory.jsx";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-const web3AuthClientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID;
-const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL;
+const DEFAULT_WEB3AUTH_CLIENT_ID = "BBbZKu05ynPQd0UzSiJgWVTte9R3GqJyZOsLwxGj8aYEzt6nYZYezDqOJc_XA0YFCeg02cArWpUgR24KuvUBx0k";
+const web3AuthClientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID || DEFAULT_WEB3AUTH_CLIENT_ID;
+const DEFAULT_RPC_URL = "https://rpc-testnet.nerochain.io";
+const rpcUrl = process.env.NEXT_PUBLIC_RPC_URL || DEFAULT_RPC_URL;
 let chainId = 689;
 const envChainId = process.env.NEXT_PUBLIC_CHAIN_ID;
 if (envChainId) {
@@ -434,16 +436,18 @@ function AppContent() {
               <Route
                 path="/marketplace"
                 element={
-                  <div
-                    className={`${
-                      isMobile
-                        ? "bg-gradient-to-r from-white/95 to-white/90 px-4"
-                        : "bg-gradient-to-r from-white/95 to-white/80 bg-cover px-6"
-                    } w-full`}
-                    style={backgroundStyle}
-                  >
-                    <Marketplace />
-                  </div>
+                  <RequireAuth>
+                    <div
+                      className={`${
+                        isMobile
+                          ? "bg-gradient-to-r from-white/95 to-white/90 px-4"
+                          : "bg-gradient-to-r from-white/95 to-white/80 bg-cover px-6"
+                      } w-full`}
+                      style={backgroundStyle}
+                    >
+                      <Marketplace walletInfo={walletInfo} />
+                    </div>
+                  </RequireAuth>
                 }
               />
               <Route
@@ -504,6 +508,7 @@ function AppContent() {
               isOpen={isWalletModalOpen}
               onClose={closeWalletModal}
               onLogin={handleLogin}
+              web3AuthClientId={web3AuthClientId}
             />
           )}
         </div>

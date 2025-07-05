@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "name": "seedsafe",
+  "buildCommand": "cd src/front-end && npm run build",
+  "outputDirectory": "src/front-end/dist",
+  "routes": [
+    { "handle": "filesystem" },
+    {
+      "src": "/api/(.*)",
+      "dest": "src/back-end-chat/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "src/front-end/dist/$1"
+    },
+    { "src": "/(.*)", "dest": "src/front-end/dist/index.html" }
+  ]
+} 

@@ -87,16 +87,17 @@ const ChatModal = ({ isOpen, onClose, userId, farmerId, farmerName }) => {
       content: newMessage.trim(),
     };
     try {
-      const { data, error } = await supabase
-        .from("message")
-        .insert([payload])
-        .select()
-        .single();
+      const { error } = await supabase.from("message").insert([payload]);
       if (error) throw error;
-      if (data) setMessages((prev) => [...prev, data]);
+      // Otimistic update – mostra a mensagem imediatamente
+      setMessages((prev) => [
+        ...prev,
+        { ...payload, id: Date.now(), created_at: new Date().toISOString() },
+      ]);
       setNewMessage("");
     } catch (err) {
       console.error("Erro ao enviar mensagem:", err);
+      alert("Erro ao enviar mensagem: " + (err?.message || "Desconhecido"));
     }
   };
 
