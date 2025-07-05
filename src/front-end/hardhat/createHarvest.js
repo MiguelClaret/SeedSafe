@@ -26,40 +26,40 @@ const fullPath = path.join(contractsDir, harvestFolder, "HarvestManager.json")
 const artifact = JSON.parse(fs.readFileSync(fullPath, "utf8"))
 
 // ⚠️ Endereço do contrato já deployado
-const contractAddress = "0xE1F625A0787753F9A1bF82561c2F3C3666c4381c"
+const contractAddress = "0xa4C53F8729A73eE40edA6a56A3eCEbba3422c437"
 const contract = new ethers.Contract(contractAddress, artifact.abi, wallet)
 
 const harvests = [
   {
-    crop: "Coffee",
+    crop: "Soybean",
     quantity: 1000,
     pricePerUnit: 80,
     deliveryOffsetSeconds: 86400,
     doc: "ipfs://coffee-doc",
   },
   {
-    crop: "Soybean",
+    crop: "Coffee",
     quantity: 1200,
     pricePerUnit: 60,
     deliveryOffsetSeconds: 172800,
     doc: "ipfs://soybean-doc",
   },
   {
-    crop: "Corn",
+    crop: "Wheat",
     quantity: 1500,
     pricePerUnit: 45,
     deliveryOffsetSeconds: 259200,
     doc: "ipfs://corn-doc",
   },
   {
-    crop: "Wheat",
+    crop: "Corn",
     quantity: 900,
     pricePerUnit: 50,
     deliveryOffsetSeconds: 345600,
     doc: "ipfs://wheat-doc",
   },
   {
-    crop: "Rice",
+    crop: "Corn",
     quantity: 1100,
     pricePerUnit: 55,
     deliveryOffsetSeconds: 432000,

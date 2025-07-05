@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
-import { ethers } from "ethers"; // Ethers v5
+import { ethers } from "ethers";
 import { X, Loader2, CheckCircle, AlertCircle, Info, DollarSign, RefreshCw } from "lucide-react";
 import {
   getNeroRate,
@@ -11,29 +10,21 @@ import {
   NEROCHAIN_ICON_SVG
 } from "../../services/NeroConverter";
 
-// Define the NerochainIcon component (usando os dados do serviço)
 const NerochainIcon = (props) => {
   return (
-    <svg
-      {...NEROCHAIN_ICON_SVG}
-      {...props}
-    >
+    <svg {...NEROCHAIN_ICON_SVG} {...props}>
       {NEROCHAIN_ICON_SVG.children.map((child, index) => {
-        if (child.tag === 'circle') {
-          return <circle key={index} {...child.props} />;
-        } else if (child.tag === 'path') {
-          return <path key={index} {...child.props} />;
-        }
+        if (child.tag === 'circle') return <circle key={index} {...child.props} />;
+        if (child.tag === 'path') return <path key={index} {...child.props} />;
         return null;
       })}
     </svg>
   );
 };
 
-// Helper to format NERO price from Wei
 const formatNeroPrice = (priceInWei) => {
   if (!priceInWei || priceInWei.isZero()) return "0.00";
-  return ethers.utils.formatUnits(priceInWei, 18); // Assuming 18 decimals for NERO token
+  return ethers.utils.formatUnits(priceInWei, 18);
 };
 
 const PurchaseModal = ({ 
@@ -42,8 +33,8 @@ const PurchaseModal = ({
   listing, 
   onConfirm, 
   walletInfo, 
-  purchaseStatus, // { state: 'idle' | 'pending' | 'success' | 'error', message: string }
-  chainName = "NERO Chain" // Default to NERO Chain
+  purchaseStatus,
+  chainName = "NERO Chain"
 }) => {
   const [quantity, setQuantity] = useState("");
   const [totalCostWei, setTotalCostWei] = useState(ethers.BigNumber.from(0));
@@ -52,7 +43,6 @@ const PurchaseModal = ({
   const [neroRate, setNeroRate] = useState(2.45);
   const [isRateLoading, setIsRateLoading] = useState(false);
 
-  // Busca a taxa de conversão usando o serviço compartilhado
   const fetchConversionRate = async () => {
     setIsRateLoading(true);
     try {
@@ -64,15 +54,11 @@ const PurchaseModal = ({
       setIsRateLoading(false);
     }
   };
-  
-  // Busca a taxa de conversão quando o modal é aberto
+
   useEffect(() => {
-    if (isOpen) {
-      fetchConversionRate();
-    }
+    if (isOpen) fetchConversionRate();
   }, [isOpen]);
 
-  // Reset state when modal opens or listing changes
   useEffect(() => {
     if (isOpen) {
       setQuantity("");
@@ -81,7 +67,6 @@ const PurchaseModal = ({
     }
   }, [isOpen, listing]);
 
-  // Calculate total cost when quantity changes
   useEffect(() => {
     if (!listing || !listing.pricePerUnit) return;
 
@@ -103,28 +88,23 @@ const PurchaseModal = ({
 
   const handleConfirmClick = () => {
     if (quantityError || !quantity || parseInt(quantity, 10) <= 0) return;
-    onConfirm(parseInt(quantity, 10)); // Pass quantity to parent handler
+    onConfirm(parseInt(quantity, 10));
   };
 
-  // Alternar entre exibição em USD e NERO
-  const toggleCurrency = () => {
-    setShowInNero(!showInNero);
-  };
+  const toggleCurrency = () => setShowInNero(!showInNero);
 
   if (!isOpen) return null;
-  if (!listing) return null; // Should not happen if opened correctly
+  if (!listing) return null;
 
-  const isInvestorConnected = walletInfo?.role === 'investor';
-  const canPurchase = !quantityError && quantity && parseInt(quantity, 10) > 0 && isInvestorConnected && purchaseStatus.state !== 'pending';
+  const isWalletConnected = !!walletInfo;
+  const canPurchase = !quantityError && quantity && parseInt(quantity, 10) > 0 && purchaseStatus.state !== 'pending';
 
-  // Formatar o total em USD
   const totalNero = parseFloat(formatNeroPrice(totalCostWei));
-  const totalUsd = convertNeroToUsd(totalNero, 1/neroRate);
+  const totalUsd = convertNeroToUsd(totalNero, 1 / neroRate);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 animate-fadeIn">
       <div className="bg-slate-800 border border-slate-700 rounded-lg w-full max-w-md shadow-xl text-slate-50 overflow-hidden">
-        {/* Header */}
         <div className="border-b border-slate-700 p-4 flex justify-between items-center bg-slate-700/50">
           <h2 className="text-lg font-semibold">Buy Crop Token on {chainName} (#{listing.id})</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors" disabled={purchaseStatus.state === 'pending'}>
@@ -132,9 +112,7 @@ const PurchaseModal = ({
           </button>
         </div>
 
-        {/* Body */}
         <div className="p-5 space-y-4">
-          {/* NERO Chain Info */}
           <div className="bg-blue-900/30 border border-blue-700 p-2 rounded text-xs text-blue-300 flex items-start gap-2">
             <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
             <span>
@@ -142,13 +120,10 @@ const PurchaseModal = ({
               Click on currency values to toggle between USD and NERO display.
             </span>
           </div>
-          
-          {/* Listing Details */}
+
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             <span>Crop:</span><span className="font-medium text-right">{listing.cropType}</span>
             <span>Producer:</span><span className="font-medium text-right">{listing.farmerName}</span>
-            
-            {/* Preço por kg com opção de alternar moeda */}
             <span>Price/kg:</span>
             <button 
               onClick={toggleCurrency}
@@ -167,11 +142,9 @@ const PurchaseModal = ({
                 </>
               )}
             </button>
-            
             <span>Available:</span><span className="font-medium text-right">{listing.quantity} kg</span>
           </div>
 
-          {/* Quantity Input */}
           <div className="border-t border-slate-700 pt-4">
             <label htmlFor="quantity" className="block text-sm font-medium text-slate-300 mb-1">Quantity to Buy (kg)</label>
             <input
@@ -188,7 +161,6 @@ const PurchaseModal = ({
             {quantityError && <p className="text-red-500 text-xs mt-1 text-right">{quantityError}</p>}
           </div>
 
-          {/* Total Cost */}
           <div className="border-t border-slate-700 pt-4 space-y-2">
             <div className="flex justify-between font-semibold text-lg">
               <span>Total Cost:</span>
@@ -210,8 +182,7 @@ const PurchaseModal = ({
                 )}
               </button>
             </div>
-            
-            {/* Conversão e taxa */}
+
             <div className="flex justify-between text-xs text-slate-400 items-center">
               <span className="flex items-center gap-1">
                 <RefreshCw className="h-3 w-3" />
@@ -227,11 +198,10 @@ const PurchaseModal = ({
             </div>
           </div>
 
-          {/* Purchase Status Feedback */}
           {purchaseStatus.state !== 'idle' && (
             <div className={`mt-4 p-3 rounded-md border text-sm flex items-start gap-2 ${
-              purchaseStatus.state === 'pending' ? 'bg-blue-900/30 border-blue-700 text-blue-300' : 
-              purchaseStatus.state === 'success' ? 'bg-green-900/30 border-green-700 text-green-300' : 
+              purchaseStatus.state === 'pending' ? 'bg-blue-900/30 border-blue-700 text-blue-300' :
+              purchaseStatus.state === 'success' ? 'bg-green-900/30 border-green-700 text-green-300' :
               'bg-red-900/30 border-red-700 text-red-300'
             }`}>
               {purchaseStatus.state === 'pending' && <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />}
@@ -240,17 +210,8 @@ const PurchaseModal = ({
               <span className="break-words">{purchaseStatus.message}</span>
             </div>
           )}
-
-          {/* Wallet Connection Check */}
-          {!isInvestorConnected && (
-             <div className="mt-4 p-3 rounded-md border text-sm flex items-center bg-yellow-900/30 border-yellow-700 text-yellow-300">
-               <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
-               Please connect your wallet as an Investor to purchase on {chainName}.
-             </div>
-          )}
         </div>
 
-        {/* Footer Actions */}
         <div className="border-t border-slate-700 p-4 flex justify-end space-x-3 bg-slate-700/30">
           <button
             onClick={onClose}

@@ -23,7 +23,7 @@ const AuditorDashboard = () => {
 
     try {
       const currentHarvestId = await publicClient.readContract({
-        address: CONTRACT_ADDRESSES.harvestManager.address,
+        address: "0xa4C53F8729A73eE40edA6a56A3eCEbba3422c437",
         abi: CONTRACT_ADDRESSES.harvestManager.abi,
         functionName: 'currentHarvestId',
       })
