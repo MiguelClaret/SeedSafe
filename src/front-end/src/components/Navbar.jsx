@@ -5,6 +5,10 @@ import { Link, useLocation } from "react-router-dom"
 import logoSvg from "../assets/logo_svg.svg"
 import { ConnectButton } from '@rainbow-me/rainbowkit'; // Import RainbowKit ConnectButton
 import { FaUserCircle } from "react-icons/fa";
+import { useQuery } from "@tanstack/react-query"
+import { getProfile } from "../services/profileService"
+import { supabase } from "../services/supabaseClient"
+import ChatModal from "./Marketplace/ChatModal"
 
 // Helper function to shorten address
 const shortenAddress = (address) => {
@@ -16,6 +20,93 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isMobileScreen, setIsMobileScreen] = useState(window.innerWidth < 768)
   const location = useLocation()
+
+  // 🔔 Notificações
+  const [unseenMessages, setUnseenMessages] = useState([])
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [chatPeer, setChatPeer] = useState(null)
+
+  // --- fetch profile for navbar display ---
+  const { data: navbarProfile } = useQuery({
+    queryKey: ["navbarProfile", userAddress],
+    enabled: !!userAddress,
+    queryFn: () => getProfile(userAddress),
+    staleTime: 60 * 1000, // 1 min
+  })
+
+  const displayName = navbarProfile?.displayName || null
+  const avatarUrl = navbarProfile?.avatarUrl || null
+
+  // Se não houver nome, usa endereço encurtado
+  const fallbackDisplay = avatarUrl ? (navbarProfile?.displayName || "") : shortenAddress(userAddress);
+
+  // === Carregar mensagens não lidas ao entrar ===
+  useEffect(() => {
+    if (!isLoggedIn || !userAddress) return
+
+    const loadUnseen = async () => {
+      const lastSeenKey = `notifications_last_seen_${userAddress.toLowerCase()}`
+      const lastSeen = localStorage.getItem(lastSeenKey)
+
+      let query = supabase
+        .from("message")
+        .select("*")
+        .eq("to", userAddress.toLowerCase())
+
+      if (lastSeen) {
+        query = query.gt("created_at", lastSeen)
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false })
+      if (!error && data) setUnseenMessages(data)
+    }
+
+    loadUnseen()
+  }, [isLoggedIn, userAddress])
+
+  // === Supabase Realtime para novas mensagens ===
+  useEffect(() => {
+    if (!isLoggedIn || !userAddress) return
+
+    const lower = userAddress.toLowerCase()
+    const channel = supabase
+      .channel(`notifications_${lower}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "message", filter: `to=eq.${lower}` },
+        (payload) => {
+          setUnseenMessages((prev) => [payload.new, ...prev])
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [isLoggedIn, userAddress])
+
+  const toggleNotifications = () => {
+    setShowNotifications((prev) => {
+      const newState = !prev
+      // Se estamos fechando (prev era true), então marcamos como lido
+      if (prev === true) {
+        const nowIso = new Date().toISOString()
+        localStorage.setItem(`notifications_last_seen_${userAddress.toLowerCase()}`, nowIso)
+        setUnseenMessages([])
+      }
+      return newState
+    })
+  }
+
+  // Abrir chat com remetente
+  const openChatWith = (peer) => {
+    setChatPeer(peer)
+    setShowNotifications(false)
+    // Considera mensagens desse peer como lidas imediatamente
+    const nowIso = new Date().toISOString()
+    localStorage.setItem(`notifications_last_seen_${userAddress.toLowerCase()}`, nowIso)
+    setUnseenMessages([]) // simplificado
+  }
 
   // Atualiza o estado isMobileScreen quando a janela é redimensionada
   useEffect(() => {
@@ -55,8 +146,50 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
           </Link>
         </div>
 
-        {/* Botão de menu móvel - apenas visível em telas pequenas */}
+        {/* Botão de menu móvel + sino (somente em tela pequena) */}
         {isMobileScreen && (
+          <div className="flex items-center gap-4">
+            {isLoggedIn && (
+              <div className="relative">
+                <button
+                  onClick={toggleNotifications}
+                  className="text-xl text-gray-600 hover:text-gray-800 transition-colors"
+                  aria-label="Notifications"
+                >
+                  <i className="fas fa-bell"></i>
+                  {unseenMessages.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-2.5 h-2.5"></span>
+                  )}
+                </button>
+
+                {showNotifications && (
+                  <div className="absolute right-0 mt-3 w-72 max-h-96 overflow-y-auto bg-white rounded-lg shadow-lg border border-gray-100 z-50">
+                    <div className="p-4 border-b flex items-center justify-between">
+                      <span className="font-semibold text-gray-800 text-sm">New Messages</span>
+                      <button onClick={() => setShowNotifications(false)} className="text-gray-500 hover:text-gray-700 text-xs">
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
+                    {unseenMessages.length === 0 ? (
+                      <p className="p-4 text-xs text-gray-500 text-center">No new messages</p>
+                    ) : (
+                      unseenMessages.slice(0, 20).map((msg) => (
+                        <button
+                          key={msg.id}
+                          onClick={() => openChatWith(msg.from)}
+                          className="w-full text-left px-4 py-3 border-b last:border-b-0 hover:bg-gray-50 text-xs text-gray-700 focus:outline-none"
+                        >
+                          <span className="font-semibold mr-1">{msg.from.substring(0, 8)}:</span>
+                          <span className="truncate inline-block max-w-[160px] align-middle">{msg.content}</span>
+                          <span className="block text-[10px] text-gray-400 mt-1">{new Date(msg.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
           <button
             onClick={toggleMobileMenu}
             className="text-xl sm:text-2xl p-2 focus:outline-none transition-transform duration-300"
@@ -66,6 +199,7 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
               className={`fas ${isMobileMenuOpen ? "fa-times rotate-180" : "fa-bars"} transition-transform duration-300`}
             ></i>
           </button>
+          </div>
         )}
 
         {/* Links de navegação e botões - visíveis em desktop */}
@@ -98,6 +232,14 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
                   >
                     Testimonials
                   </a>
+                  {isLoggedIn && (
+                    <Link
+                      to="/users"
+                      className="font-medium text-lg relative hover:text-green-700 transition-colors"
+                    >
+                      Community
+                    </Link>
+                  )}
                 </>
               ) : (
                 <>
@@ -113,6 +255,14 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
                   >
                     Marketplace
                   </Link>
+                  {isLoggedIn && (
+                    <Link
+                      to="/users"
+                      className={`font-medium text-lg relative hover:text-green-700 transition-colors ${isActive("/users") ? "text-green-700" : ""}`}
+                    >
+                      Community
+                    </Link>
+                  )}
                   {/* Show Register Crop only if logged in as Producer */}
                   {isLoggedIn && userRole === 'producer' && (
                     <Link
@@ -144,14 +294,57 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
             <div className="flex gap-4 items-center">
               {isLoggedIn ? (
                 <>
+                  {/* 🔔 Ícone de notificações */}
+                  <div className="relative">
+                    <button
+                      onClick={toggleNotifications}
+                      className="text-xl text-gray-600 hover:text-gray-800 transition-colors"
+                    >
+                      <i className="fas fa-bell"></i>
+                      {unseenMessages.length > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 rounded-full w-2.5 h-2.5"></span>
+                      )}
+                    </button>
+
+                    {/* Dropdown */}
+                    {showNotifications && (
+                      <div className="absolute right-0 mt-3 w-80 max-h-96 overflow-y-auto bg-white rounded-lg shadow-lg border border-gray-100 z-50">
+                        <div className="p-4 border-b flex items-center justify-between">
+                          <span className="font-semibold text-gray-800">New Messages</span>
+                          <button onClick={() => setShowNotifications(false)} className="text-gray-500 hover:text-gray-700 text-sm">
+                            <i className="fas fa-times"></i>
+                          </button>
+                        </div>
+                        {unseenMessages.length === 0 ? (
+                          <p className="p-4 text-sm text-gray-500 text-center">No new messages</p>
+                        ) : (
+                          unseenMessages.slice(0, 20).map((msg) => (
+                            <button
+                              key={msg.id}
+                              onClick={() => openChatWith(msg.from)}
+                              className="w-full text-left px-4 py-3 border-b last:border-b-0 hover:bg-gray-50 text-sm text-gray-700 focus:outline-none"
+                            >
+                              <span className="font-semibold mr-1">{msg.from.substring(0, 8)}:</span>
+                              <span className="truncate inline-block max-w-[200px] align-middle">{msg.content}</span>
+                              <span className="block text-xs text-gray-400 mt-1">{new Date(msg.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
                   {/* Display user info and logout */} 
                   <Link
                     to="/profile"
                     className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-lg hover:bg-gray-200 transition-colors"
                   >
-                    <FaUserCircle className={`text-xl ${userRole === 'producer' ? 'text-green-600' : 'text-blue-600'}`} />
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="Avatar" className="w-6 h-6 rounded-full object-cover" />
+                    ) : (
+                      <FaUserCircle className={`text-xl ${userRole === 'producer' ? 'text-green-600' : 'text-blue-600'}`} />
+                    )}
                     <span className="text-sm font-medium text-gray-700">
-                      {shortenAddress(userAddress)}
+                      {fallbackDisplay}
                     </span>
                   </Link>
                   <button
@@ -201,6 +394,15 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
                 <a href="#testimonials" className="font-medium hover:text-green-700 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                   Testimonials
                 </a>
+                {isLoggedIn && (
+                  <Link
+                    to="/users"
+                    className="font-medium hover:text-green-700 transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Community
+                  </Link>
+                )}
               </>
             ) : (
               <>
@@ -210,6 +412,15 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
                 <Link to="/marketplace" className="font-medium hover:text-green-700 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                   Marketplace
                 </Link>
+                {isLoggedIn && (
+                  <Link
+                    to="/users"
+                    className={`font-medium text-lg relative hover:text-green-700 transition-colors ${isActive("/users") ? "text-green-700" : ""}`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Community
+                  </Link>
+                )}
                 {isLoggedIn && userRole === 'producer' && (
                   <Link to="/register" className="font-medium hover:text-green-700 transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
                     Register Crop
@@ -237,9 +448,13 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-2 py-2 hover:text-green-700 transition-colors"
                 >
-                  <FaUserCircle className={`text-xl ${userRole === 'producer' ? 'text-green-600' : 'text-blue-600'}`} />
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Avatar" className="w-6 h-6 rounded-full object-cover" />
+                  ) : (
+                    <FaUserCircle className={`text-xl ${userRole === 'producer' ? 'text-green-600' : 'text-blue-600'}`} />
+                  )}
                   <span className="text-sm font-medium">
-                    {shortenAddress(userAddress)}
+                    {fallbackDisplay}
                   </span>
                 </Link>
                 <button
@@ -261,6 +476,15 @@ const Navbar = ({ openWalletModal, isLoggedIn, userRole, userAddress, onLogout }
             )}
           </div>
         </div>
+      )}
+
+      {chatPeer && (
+        <ChatModal 
+          isOpen={Boolean(chatPeer)}
+          onClose={() => setChatPeer(null)}
+          userId={userAddress}
+          farmerId={chatPeer}
+        />
       )}
     </nav>
   )

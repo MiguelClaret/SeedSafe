@@ -11,7 +11,10 @@
   "dependencies": {
     "@nomicfoundation/hardhat-toolbox": "^3.0.0",
     "@openzeppelin/contracts": "^5.0.2",
-    "dotenv": "^16.4.5"
+    "axios": "^1.10.0",
+    "dotenv": "^16.4.5",
+    "hardhat": "^2.20.1",
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.55",
