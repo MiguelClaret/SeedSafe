@@ -1,15 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { GoogleGenAI } from "@google/genai";
 
-// Initialize Gemini client
-const ai = new GoogleGenAI({
-  apiKey: "AIzaSyDGhpfn-BSJq13JCLj12mWW8PaAxg8V6bU",
-});
-const GEMINI_CONTEXT = `
-your name is agrobot, you know everything about seed safe... (same full context as before)
-`;
+// endpoint da função serverless
+const CHAT_ENDPOINT = import.meta.env.VITE_CHAT_API || '/api/chat';
+const GEMINI_CONTEXT = `SeedSafe platform context`;
 
 const ChatMessage = ({ content, sender, isTyping }) => {
   if (isTyping) {
@@ -64,14 +59,16 @@ const ChatWindow = ({ onClose }) => {
     setTimeout(async () => {
       let reply;
       try {
-        const res = await ai.models.generateContent({
-          model: "gemini-2.0-flash",
-          contents: `${GEMINI_CONTEXT}, answer in plain text: ${text}`,
+        const apiRes = await fetch(CHAT_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: `${GEMINI_CONTEXT}. Pergunta: ${text}` })
         });
-        reply = res.text;
+        const data = await apiRes.json();
+        reply = data.answer || "Desculpe, ocorreu um erro.";
       } catch (err) {
-        console.error("Gemini error", err);
-        reply = "Sorry, an error occurred. Please try again later.";
+        console.error("Chat API error", err);
+        reply = "Desculpe, ocorreu um erro. Tente novamente mais tarde.";
       }
 
       setIsTyping(false);

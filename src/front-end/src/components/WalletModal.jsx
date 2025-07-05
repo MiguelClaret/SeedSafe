@@ -40,10 +40,12 @@ if (envChainId) {
   console.warn(`NEXT_PUBLIC_CHAIN_ID not set. Using default ${chainId}.`);
 }
 
-const bundlerUrl = process.env.NEXT_PUBLIC_BUNDLER_URL;
+const sanitize = (str) => (str ? str.split(" ")[0].trim() : undefined);
+
 const paymasterUrl = process.env.NEXT_PUBLIC_PAYMASTER_URL;
-const entryPointAddress = process.env.NEXT_PUBLIC_ENTRY_POINT_ADDRESS;
-const simpleAccountFactoryAddress = process.env.NEXT_PUBLIC_SIMPLE_ACCOUNT_FACTORY_ADDRESS;
+const entryPointAddress = sanitize(process.env.NEXT_PUBLIC_ENTRY_POINT_ADDRESS);
+const simpleAccountFactoryAddress = sanitize(process.env.NEXT_PUBLIC_SIMPLE_ACCOUNT_FACTORY_ADDRESS);
+const bundlerUrl = sanitize(process.env.NEXT_PUBLIC_BUNDLER_URL);
 const paymasterApiKey = process.env.NEXT_PUBLIC_PAYMASTER_API_KEY;
 const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 // -------------------------------
@@ -96,18 +98,18 @@ const WalletModal = ({ isOpen, onClose, onLogin }) => {
           config: { chainConfig }
         });
 
+        const envNetworkKey = process.env.NEXT_PUBLIC_WEB3AUTH_NETWORK;
+        const resolvedNetwork =
+          (envNetworkKey && WEB3AUTH_NETWORK[envNetworkKey]) ||
+          WEB3AUTH_NETWORK.SAPPHIRE_DEVNET;
+
         // Then pass it to Web3Auth instance
         const web3auth = new Web3Auth({
           clientId: web3AuthClientId,
-          web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET, // Use SAPPHIRE_MAINNET for production
+          web3AuthNetwork: resolvedNetwork, // configurável via .env
           chainConfig: chainConfig,
-          uiConfig: {
-            appName: "SeedSafe",
-            mode: "light", // or "dark"
-            loginMethodsOrder: ["google", "facebook", "twitter", "email_passwordless"],
-          },
-          // Add the privateKeyProvider
-          privateKeyProvider: privateKeyProvider
+          privateKeyProvider: privateKeyProvider,
+          uiConfig: { appName: "SeedSafe" },
         });
 
         await web3auth.initModal();
