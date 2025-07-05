@@ -17,8 +17,8 @@ import CropCard from "./CropCard";
 import HarvestManagerABI from "../../abi/abiHarvest.json";
 import HarvestMarketABI from "../../abi/abiMarket.json";
 
-const harvestManagerAddress = "0x9e19e961809bE09EB576fbB99c8a17f121d0C028";
-const harvestMarketAddress = "0x385eD0FD6F6e514d96F9e2EFf5B9843592e3bfeF";
+const harvestManagerAddress = "0xa4C53F8729A73eE40edA6a56A3eCEbba3422c437";
+const harvestMarketAddress = "0x010d5a89e02e16C9bfE48d2fc99D0D4C535FE15D";
 const NERO_RPC_URL = "https://rpc-testnet.nerochain.io";
 const NERO_CHAIN_ID = 689;
 const NERO_USD_RATE = 0.000134;

@@ -28,12 +28,15 @@ contract HarvestMarket is Ownable, ReentrancyGuard {
             uint256 pricePerUnit,
             ,
             address producer,
-            HarvestManager.HarvestStatus status,
+            ,
             ,
             
         ) = harvestManager.harvests(harvestId);
 
+        // ✅ NOVO: lê status corretamente via função auxiliar
+        HarvestManager.HarvestStatus status = harvestManager.getHarvestStatus(harvestId);
         require(status == HarvestManager.HarvestStatus.VALIDATED, "Harvest not validated");
+
         require(amount > 0 && amount <= totalAvailable, "Invalid amount");
         require(
             harvestManager.balanceOf(producer, harvestId) >= amount,
@@ -43,17 +46,17 @@ contract HarvestMarket is Ownable, ReentrancyGuard {
         uint256 totalPrice = pricePerUnit * amount;
         require(msg.value >= totalPrice, "Insufficient payment");
 
-        // Transfere o token para o comprador
+        // Transfer the tokens
         harvestManager.safeTransferFrom(producer, msg.sender, harvestId, amount, "");
 
-        // Registra a compra
+        // Record the purchase
         purchases[harvestId][msg.sender] += amount;
 
-        // Repassa o pagamento ao produtor
+        // Transfer payment to the producer
         (bool sent, ) = producer.call{value: totalPrice}("");
         require(sent, "Transfer to producer failed");
 
-        // Troco, se for o caso
+        // Refund excess
         if (msg.value > totalPrice) {
             (bool refund, ) = msg.sender.call{value: msg.value - totalPrice}("");
             require(refund, "Refund failed");

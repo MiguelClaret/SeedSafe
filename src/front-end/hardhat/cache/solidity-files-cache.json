@@ -567,8 +567,8 @@
       ]
     },
     "C:\\Users\\Inteli\\Documents\\SeedSafe\\src\\front-end\\hardhat\\contracts\\HarvestManager.sol": {
-      "lastModificationDate": 1751651216245,
-      "contentHash": "d59d90c27fcbb4b0159c21fd63a79f25",
+      "lastModificationDate": 1751690555336,
+      "contentHash": "f60eff52a2a1630a5c220ec349df27dc",
       "sourceName": "contracts/HarvestManager.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -606,8 +606,8 @@
       ]
     },
     "C:\\Users\\Inteli\\Documents\\SeedSafe\\src\\front-end\\hardhat\\contracts\\HarvestMarket.sol": {
-      "lastModificationDate": 1751593197308,
-      "contentHash": "6b321cb4902a93f9963b697b0a5956a4",
+      "lastModificationDate": 1751690573480,
+      "contentHash": "484bcb6a19485c2c75d8b920de640ca1",
       "sourceName": "contracts/HarvestMarket.sol",
       "solcConfig": {
         "version": "0.8.20",

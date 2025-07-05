@@ -78,38 +78,28 @@ contract HarvestManager is ERC1155, AccessControl {
         onlyRole(AUDITOR_ROLE)
     {
         Harvest storage h = harvests[harvestId];
-        require(
-            h.status == HarvestStatus.PENDING,
-            "Harvest not pending or already processed"
-        );
+        require(h.status == HarvestStatus.PENDING, "Harvest not pending or already processed");
 
         _mint(to, harvestId, h.quantity, "");
         h.status = HarvestStatus.VALIDATED;
 
-        // 🔓 Aprova automaticamente o contrato HarvestMarket para transferir tokens do produtor
         if (harvestMarketAddress != address(0)) {
             _setApprovalForAll(to, harvestMarketAddress, true);
         }
     }
 
-    function rejectHarvest(uint256 harvestId)
-        external
-        onlyRole(AUDITOR_ROLE)
-    {
+    function rejectHarvest(uint256 harvestId) external onlyRole(AUDITOR_ROLE) {
         Harvest storage h = harvests[harvestId];
-        require(
-            h.status == HarvestStatus.PENDING,
-            "Harvest not pending or already processed"
-        );
+        require(h.status == HarvestStatus.PENDING, "Harvest not pending or already processed");
         h.status = HarvestStatus.REJECTED;
         emit HarvestRejected(harvestId, msg.sender);
     }
 
-    function getPendingHarvestIds()
-        external
-        view
-        returns (uint256[] memory)
-    {
+    function getHarvestStatus(uint256 harvestId) external view returns (HarvestStatus) {
+        return harvests[harvestId].status;
+    }
+
+    function getPendingHarvestIds() external view returns (uint256[] memory) {
         uint256 pendingCount = 0;
         for (uint256 i = 0; i < currentHarvestId; i++) {
             if (harvests[i].status == HarvestStatus.PENDING) {
