@@ -24,7 +24,7 @@ export const CONTRACT_ADDRESSES = {
     abi: abiHarvest
   },
   harvestMarket: {
-    addres: '0x385eD0FD6F6e514d96F9e2EFf5B9843592e3bfeF',
+    address: '0x385eD0FD6F6e514d96F9e2EFf5B9843592e3bfeF',
     abi:abiMarket
   },
   paymasterRpc: "https://paymaster-testnet.nerochain.io",
